@@ -46,6 +46,11 @@
           "id": "fhizxAiTools.skills",
           "name": "Skills",
           "icon": ""
+        },
+        {
+          "id": "fhizxAiTools.tokenCounter",
+          "name": "Token Counter",
+          "icon": ""
         }
       ]
     },
@@ -58,8 +63,18 @@
     ],
     "commands": [
       {
+        "command": "fhizxAiTools.sendToChat",
+        "title": "Enviar al Chat de IA",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "fhizxAiTools.refresh",
+        "title": "Refrescar",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "fhizxAiTools.setGlobalPath",
-        "title": "FhizxAITools: Seleccionar Ruta Global",
+        "title": "Seleccionar Ruta Global",
         "icon": "$(folder-opened)"
       },
       {
@@ -134,9 +149,14 @@
     "menus": {
       "view/title": [
         {
-          "command": "fhizxAiTools.setGlobalPath",
+          "command": "fhizxAiTools.refresh",
           "when": "view == fhizxAiTools.notes",
           "group": "navigation@1"
+        },
+        {
+          "command": "fhizxAiTools.setGlobalPath",
+          "when": "view == fhizxAiTools.notes",
+          "group": "navigation@2"
         },
         {
           "command": "fhizxAiTools.createPromptFile",
@@ -171,15 +191,20 @@
         {
           "command": "fhizxAiTools.createNoteFile",
           "when": "view == fhizxAiTools.notes",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "fhizxAiTools.createNoteFolder",
           "when": "view == fhizxAiTools.notes",
-          "group": "navigation@3"
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [
+        {
+          "command": "fhizxAiTools.sendToChat",
+          "when": "viewItem == file",
+          "group": "inline@1"
+        },
         {
           "command": "fhizxAiTools.createFileContext",
           "when": "viewItem == folder",
@@ -192,11 +217,20 @@
         },
         {
           "command": "fhizxAiTools.renameItem",
+          "when": "viewItem == file || viewItem == folder",
           "group": "inline@3"
         },
         {
           "command": "fhizxAiTools.deleteItem",
+          "when": "viewItem == file || viewItem == folder",
           "group": "inline@4"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "fhizxAiTools.sendToChat",
+          "when": "resourceExtname == .md || resourceExtname == .prompt.md",
+          "group": "navigation"
         }
       ]
     },
@@ -220,5 +254,8 @@
     "@types/node": "^18.x",
     "@types/vscode": "^1.85.0",
     "typescript": "^5.x"
+  },
+  "dependencies": {
+    "js-tiktoken": "^1.0.12"
   }
 }

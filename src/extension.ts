@@ -2,18 +2,145 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceTreeDataProvider, WorkspaceItem } from "./treeDataProvider";
+import { getEncoding } from "js-tiktoken";
 
+// Inicializamos el codificador una sola vez para optimizar rendimiento
+const encoder = getEncoding("cl100k_base");
+
+// Clase para los elementos de métricas en la pestaña Token Counter
+class TokenStatItem extends vscode.TreeItem {
+  constructor(
+    public readonly label: string,
+    public readonly statDescription?: string,
+    iconName?: string,
+  ) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.description = statDescription;
+    this.contextValue = "tokenStat"; // Protegido sin acciones de edición/eliminación
+    if (iconName) {
+      this.iconPath = new vscode.ThemeIcon(iconName);
+    }
+  }
+}
+
+// Data Provider encargado de calcular y refrescar las métricas del archivo activo
+class TokenCounterTreeDataProvider implements vscode.TreeDataProvider<TokenStatItem> {
+  private _onDidChangeTreeData: vscode.EventEmitter<
+    TokenStatItem | undefined | void
+  > = new vscode.EventEmitter<TokenStatItem | undefined | void>();
+  readonly onDidChangeTreeData: vscode.Event<TokenStatItem | undefined | void> =
+    this._onDidChangeTreeData.event;
+
+  constructor() {
+    vscode.window.onDidChangeActiveTextEditor(() => this.refresh());
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      if (
+        vscode.window.activeTextEditor &&
+        e.document === vscode.window.activeTextEditor.document
+      ) {
+        this.refresh();
+      }
+    });
+  }
+
+  refresh(): void {
+    this._onDidChangeTreeData.fire();
+  }
+
+  getTreeItem(element: TokenStatItem): vscode.TreeItem {
+    return element;
+  }
+
+  async getChildren(element?: TokenStatItem): Promise<TokenStatItem[]> {
+    if (element) {
+      return [];
+    }
+
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      return [
+        new TokenStatItem("Sin archivo activo", "Abre un archivo", "info"),
+      ];
+    }
+
+    const doc = editor.document;
+    const text = doc.getText();
+    const fileName = path.basename(doc.fileName);
+
+    // Métricas básicas
+    const charCount = text.length;
+    const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const lineCount = doc.lineCount;
+
+    let exactTokens = 0;
+    try {
+      exactTokens = encoder.encode(text).length;
+    } catch (error) {
+      exactTokens = Math.ceil(charCount / 4);
+    }
+
+    const costGPT4o = (exactTokens / 1_000_000) * 2.5;
+    const costMini = (exactTokens / 1_000_000) * 0.15;
+    const costSonnet = (exactTokens / 1_000_000) * 3.0;
+    const costGemini = (exactTokens / 1_000_000) * 0.1;
+
+    return [
+      new TokenStatItem("📁 Archivo:", fileName, "file"),
+      new TokenStatItem(
+        "🔢 Tokens Exactos:",
+        exactTokens.toLocaleString(),
+        "symbol-number",
+      ),
+      new TokenStatItem(
+        "📏 Caracteres:",
+        charCount.toLocaleString(),
+        "text-size",
+      ),
+      new TokenStatItem("📖 Palabras:", wordCount.toLocaleString(), "book"),
+      new TokenStatItem(
+        "📄 Líneas:",
+        lineCount.toLocaleString(),
+        "list-ordered",
+      ),
+
+      // Sección de Costos Estimados de API (Input)
+      new TokenStatItem("--- COSTS BY MODEL ---", "", ""),
+      new TokenStatItem(
+        "🟢 GPT-4o:",
+        `$${costGPT4o.toFixed(5)}`,
+        "credit-card",
+      ),
+      new TokenStatItem(
+        "🔵 GPT-4o Mini:",
+        `$${costMini.toFixed(5)}`,
+        "credit-card",
+      ),
+      new TokenStatItem(
+        "🟠 Claude 3.5 Sonnet:",
+        `$${costSonnet.toFixed(5)}`,
+        "credit-card",
+      ),
+      new TokenStatItem(
+        "🟣 Gemini Flash:",
+        `$${costGemini.toFixed(5)}`,
+        "credit-card",
+      ),
+    ];
+  }
+}
 export function activate(context: vscode.ExtensionContext) {
   const promptsProvider = new WorkspaceTreeDataProvider("prompts");
   const agentsProvider = new WorkspaceTreeDataProvider("agents");
   const skillsProvider = new WorkspaceTreeDataProvider("skills");
   const notesProvider = new WorkspaceTreeDataProvider("notes");
+  const tokenCounterProvider = new TokenCounterTreeDataProvider();
 
   const providers = {
     prompts: promptsProvider,
     agents: agentsProvider,
     skills: skillsProvider,
     notes: notesProvider,
+    tokenCounterProvider,
   };
 
   vscode.window.registerTreeDataProvider(
@@ -23,8 +150,12 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.window.registerTreeDataProvider("fhizxAiTools.agents", agentsProvider);
   vscode.window.registerTreeDataProvider("fhizxAiTools.skills", skillsProvider);
   vscode.window.registerTreeDataProvider("fhizxAiTools.notes", notesProvider);
+  vscode.window.registerTreeDataProvider(
+    "fhizxAiTools.tokenCounter",
+    tokenCounterProvider,
+  );
 
-  // Función genérica aislada para crear archivos en su sección correcta
+  // Función genérica aislada para crear archivos en su sección correcta con prefijo automático
   async function createNewFile(
     category: "prompts" | "agents" | "skills" | "notes",
     targetNode?: WorkspaceItem,
@@ -49,19 +180,36 @@ export function activate(context: vscode.ExtensionContext) {
 
     const name = await vscode.window.showInputBox({
       prompt: `Nombre del archivo para ${category}`,
+      placeHolder: "ej. mi-archivo",
     });
     if (!name) return;
 
     const isNote = category === "notes";
     const extension = isNote ? ".md" : ".prompt.md";
 
-    const finalName =
-      name.endsWith(extension) || (isNote && name.endsWith(".prompt.md"))
-        ? name
-        : isNote
-          ? `${name}.md`
-          : `${name}.prompt.md`;
+    // Definición de prefijos según la categoría solicitada
+    const prefixes: Record<"prompts" | "agents" | "skills" | "notes", string> =
+      {
+        prompts: "p-",
+        agents: "a-",
+        skills: "s-",
+        notes: "",
+      };
 
+    const prefix = prefixes[category];
+
+    // 1. Limpiamos la extensión si el usuario la escribió por accidente
+    let cleanName = name.trim();
+    if (cleanName.endsWith(extension)) {
+      cleanName = cleanName.slice(0, -extension.length);
+    }
+
+    // 2. Aseguramos el prefijo correspondiente sin duplicarlo si ya lo escribió
+    if (prefix && !cleanName.startsWith(prefix)) {
+      cleanName = prefix + cleanName;
+    }
+
+    const finalName = `${cleanName}${extension}`;
     const filePath = path.join(basePath, finalName);
 
     if (fs.existsSync(filePath)) {
@@ -69,7 +217,10 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    fs.writeFileSync(filePath, `# ${name}\n`);
+    // Reemplazo del texto plano por el boilerplate correspondiente con la particularidad
+    const initialContent = getBoilerplateContent(category, name);
+    fs.writeFileSync(filePath, initialContent);
+
     refreshAll();
     vscode.window.showTextDocument(vscode.Uri.file(filePath));
   }
@@ -110,7 +261,77 @@ export function activate(context: vscode.ExtensionContext) {
     refreshAll();
   }
 
+  // Función auxiliar para obtener la plantilla base según la categoría y particularidad
+  function getBoilerplateContent(
+    category: "prompts" | "agents" | "skills" | "notes",
+    rawName: string,
+  ): string {
+    const title = rawName;
+    switch (category) {
+      case "prompts":
+        return `# Prompt: ${title}\n\n## Descripción\n[Describe brevemente el propósito de este prompt]\n\n## Variables\n- \`{{variable}}\`: Descripción de la variable\n\n## Contenido del Prompt\n[Escribe aquí las instrucciones para la IA]\n`;
+
+      case "agents":
+        return `# Agent: ${title}\n\n## Rol y Propósito\n[Define quién es este agente, su personalidad y su objetivo general]\n\n## Instrucciones / Comportamiento\n- Comportamiento o regla 1\n- Comportamiento o regla 2\n\n## Restricciones\n- Qué NO debe hacer el agente\n`;
+
+      case "skills":
+        return `# Skill: ${title}\n\n## Objetivo\n[Describe la habilidad o tarea técnica específica que automatiza esta skill]\n\n## Pasos de Ejecución\n1. Paso inicial...\n2. Paso de procesamiento...\n\n## Resultado Esperado\n[Describe el formato de salida o entregable]\n`;
+
+      case "notes":
+        return `# Nota: ${title}\n\n## Resumen\n[Apunta aquí notas rápidas, ideas o referencias]\n\n---\n\n`;
+
+      default:
+        return `# ${title}\n`;
+    }
+  }
+
   context.subscriptions.push(
+    // Comando para enviar el archivo actual al Chat de IA (Copilot / Chat integrado)
+    vscode.commands.registerCommand(
+      "fhizxAiTools.sendToChat",
+      async (node?: WorkspaceItem | vscode.Uri) => {
+        let filePath = "";
+
+        // Determinar si la llamada viene del árbol lateral, de una URI o del editor activo
+        if (node && "resourceUri" in node) {
+          filePath = node.resourceUri.fsPath;
+        } else if (node instanceof vscode.Uri) {
+          filePath = node.fsPath;
+        } else if (vscode.window.activeTextEditor) {
+          filePath = vscode.window.activeTextEditor.document.fileName;
+        }
+
+        if (!filePath || !fs.existsSync(filePath)) {
+          vscode.window.showWarningMessage(
+            "Por favor selecciona o abre un archivo válido para enviar al chat.",
+          );
+          return;
+        }
+
+        const content = fs.readFileSync(filePath, "utf-8");
+        const fileName = path.basename(filePath);
+
+        try {
+          // Intenta abrir el chat nativo de VS Code / Copilot pre-llenando la consulta con el contenido
+          await vscode.commands.executeCommand("workbench.action.chat.open", {
+            query: `Usa el siguiente recurso (${fileName}):\n\n${content}`,
+          });
+        } catch (error) {
+          // Fallback de seguridad: Copia al portapapeles y abre el chat si el comando directo no está disponible
+          await vscode.env.clipboard.writeText(content);
+          vscode.commands.executeCommand("workbench.action.chat.open");
+          vscode.window.showInformationMessage(
+            `El contenido de "${fileName}" se copió al portapapeles y se abrió el chat.`,
+          );
+        }
+      },
+    ),
+
+    vscode.commands.registerCommand("fhizxAiTools.refresh", () => {
+      refreshAll();
+      vscode.window.showInformationMessage("Archivos y carpetas actualizados");
+    }),
+
     vscode.commands.registerCommand("fhizxAiTools.setGlobalPath", async () => {
       const uri = await vscode.window.showOpenDialog({
         canSelectFiles: false,

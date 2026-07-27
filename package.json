@@ -1,0 +1,224 @@
+{
+  "name": "fhizx-ai-tools-manager",
+  "displayName": "Fhizx AI Tools Manager",
+  "description": "Gestiona prompts, agents, skills y notas para herramientas de IA",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Chat",
+    "AI"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fhizx-ai-tools-container",
+          "title": "FhizxAITools",
+          "icon": "assets/logo.png"
+        }
+      ]
+    },
+    "views": {
+      "fhizx-ai-tools-container": [
+        {
+          "id": "fhizxAiTools.notes",
+          "name": "Notes",
+          "icon": ""
+        },
+        {
+          "id": "fhizxAiTools.prompts",
+          "name": "Prompts",
+          "icon": ""
+        },
+        {
+          "id": "fhizxAiTools.agents",
+          "name": "Agents",
+          "icon": ""
+        },
+        {
+          "id": "fhizxAiTools.skills",
+          "name": "Skills",
+          "icon": ""
+        }
+      ]
+    },
+    "chatParticipants": [
+      {
+        "id": "fhizx-ai-tools.participant",
+        "name": "fhizx-ai-tools",
+        "description": "Ejecuta prompts, agents y skills guardados en tu espacio global."
+      }
+    ],
+    "commands": [
+      {
+        "command": "fhizxAiTools.setGlobalPath",
+        "title": "FhizxAITools: Seleccionar Ruta Global",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "fhizxAiTools.createPromptFile",
+        "title": "Crear Archivo",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "fhizxAiTools.createPromptFolder",
+        "title": "Crear Carpeta",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "fhizxAiTools.createAgentFile",
+        "title": "Crear Archivo",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "fhizxAiTools.createAgentFolder",
+        "title": "Crear Carpeta",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "fhizxAiTools.createSkillFile",
+        "title": "Crear Archivo",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "fhizxAiTools.createSkillFolder",
+        "title": "Crear Carpeta",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "fhizxAiTools.createNoteFile",
+        "title": "Crear Archivo",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "fhizxAiTools.createNoteFolder",
+        "title": "Crear Carpeta",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "fhizxAiTools.createFileContext",
+        "title": "Crear Archivo",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "fhizxAiTools.createFolderContext",
+        "title": "Crear Carpeta",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "fhizxAiTools.renameItem",
+        "title": "Modificar Nombre",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "fhizxAiTools.deleteItem",
+        "title": "Eliminar",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "fhizxAiTools.openFile",
+        "title": "Abrir Archivo"
+      },
+      {
+        "command": "fhizxAiTools.checkForUpdates",
+        "title": "FhizxAITools: Buscar Actualizaciones"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "fhizxAiTools.setGlobalPath",
+          "when": "view == fhizxAiTools.notes",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fhizxAiTools.createPromptFile",
+          "when": "view == fhizxAiTools.prompts",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fhizxAiTools.createPromptFolder",
+          "when": "view == fhizxAiTools.prompts",
+          "group": "navigation@3"
+        },
+        {
+          "command": "fhizxAiTools.createAgentFile",
+          "when": "view == fhizxAiTools.agents",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fhizxAiTools.createAgentFolder",
+          "when": "view == fhizxAiTools.agents",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fhizxAiTools.createSkillFile",
+          "when": "view == fhizxAiTools.skills",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fhizxAiTools.createSkillFolder",
+          "when": "view == fhizxAiTools.skills",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fhizxAiTools.createNoteFile",
+          "when": "view == fhizxAiTools.notes",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fhizxAiTools.createNoteFolder",
+          "when": "view == fhizxAiTools.notes",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "fhizxAiTools.createFileContext",
+          "when": "viewItem == folder",
+          "group": "inline@1"
+        },
+        {
+          "command": "fhizxAiTools.createFolderContext",
+          "when": "viewItem == folder",
+          "group": "inline@2"
+        },
+        {
+          "command": "fhizxAiTools.renameItem",
+          "group": "inline@3"
+        },
+        {
+          "command": "fhizxAiTools.deleteItem",
+          "group": "inline@4"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "",
+      "properties": {
+        "fhizxAiTools.globalPath": {
+          "type": "string",
+          "default": "",
+          "description": "Ruta global donde se almacenarán los prompts, agents, skills y notas."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.x"
+  }
+}

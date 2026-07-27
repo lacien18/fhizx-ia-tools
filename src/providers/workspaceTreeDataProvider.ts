@@ -1,34 +1,15 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
+import { WorkspaceItem } from "../models/workspaceItemModel";
 
-export class WorkspaceItem extends vscode.TreeItem {
-  constructor(
-    public readonly label: string,
-    public readonly resourceUri: vscode.Uri,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    public readonly isFolder: boolean,
-  ) {
-    super(resourceUri, collapsibleState);
-    this.contextValue = isFolder ? "folder" : "file";
-    if (!isFolder) {
-      this.command = {
-        command: "fhizxAiTools.openFile",
-        title: "Abrir Archivo",
-        arguments: [resourceUri],
-      };
-    }
-  }
-}
-
-export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<
+export class workspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<
     WorkspaceItem | undefined | void
-  > = new vscode.EventEmitter<WorkspaceItem | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<WorkspaceItem | undefined | void> =
-    this._onDidChangeTreeData.event;
+  >();
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor(private category: "prompts" | "agents" | "skills" | "notes") {}
+  constructor(public category: "prompts" | "agents" | "skills" | "notes") {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -40,9 +21,7 @@ export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
 
   async getChildren(element?: WorkspaceItem): Promise<WorkspaceItem[]> {
     const globalPath = this.getGlobalCategoryPath();
-    if (!globalPath) {
-      return [];
-    }
+    if (!globalPath) return [];
 
     const targetPath = element ? element.resourceUri.fsPath : globalPath;
 
@@ -67,25 +46,20 @@ export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
               true,
             ),
           );
-        } else if (entry.isFile()) {
-          if (this.validateExtension(entry.name)) {
-            items.push(
-              new WorkspaceItem(
-                entry.name,
-                uri,
-                vscode.TreeItemCollapsibleState.None,
-                false,
-              ),
-            );
-          }
+        } else if (entry.isFile() && this.validateExtension(entry.name)) {
+          items.push(
+            new WorkspaceItem(
+              entry.name,
+              uri,
+              vscode.TreeItemCollapsibleState.None,
+              false,
+            ),
+          );
         }
       }
 
-      // Ordenar: Carpetas primero, luego archivos alfabéticamente
       return items.sort((a, b) => {
-        if (a.isFolder === b.isFolder) {
-          return a.label.localeCompare(b.label);
-        }
+        if (a.isFolder === b.isFolder) return a.label.localeCompare(b.label);
         return a.isFolder ? -1 : 1;
       });
     } catch (error) {
@@ -96,9 +70,8 @@ export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
   private validateExtension(fileName: string): boolean {
     if (this.category === "notes") {
       return fileName.endsWith(".md") && !fileName.endsWith(".prompt.md");
-    } else {
-      return fileName.endsWith(".prompt.md");
     }
+    return fileName.endsWith(".prompt.md");
   }
 
   public getGlobalCategoryPath(): string | undefined {

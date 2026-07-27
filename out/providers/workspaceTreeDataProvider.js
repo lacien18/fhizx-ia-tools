@@ -1,32 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WorkspaceTreeDataProvider = exports.WorkspaceItem = void 0;
+exports.workspaceTreeDataProvider = void 0;
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
-class WorkspaceItem extends vscode.TreeItem {
-    label;
-    resourceUri;
-    collapsibleState;
-    isFolder;
-    constructor(label, resourceUri, collapsibleState, isFolder) {
-        super(resourceUri, collapsibleState);
-        this.label = label;
-        this.resourceUri = resourceUri;
-        this.collapsibleState = collapsibleState;
-        this.isFolder = isFolder;
-        this.contextValue = isFolder ? "folder" : "file";
-        if (!isFolder) {
-            this.command = {
-                command: "fhizxAiTools.openFile",
-                title: "Abrir Archivo",
-                arguments: [resourceUri],
-            };
-        }
-    }
-}
-exports.WorkspaceItem = WorkspaceItem;
-class WorkspaceTreeDataProvider {
+const workspaceItemModel_1 = require("../models/workspaceItemModel");
+class workspaceTreeDataProvider {
     category;
     _onDidChangeTreeData = new vscode.EventEmitter();
     onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -41,9 +20,8 @@ class WorkspaceTreeDataProvider {
     }
     async getChildren(element) {
         const globalPath = this.getGlobalCategoryPath();
-        if (!globalPath) {
+        if (!globalPath)
             return [];
-        }
         const targetPath = element ? element.resourceUri.fsPath : globalPath;
         try {
             if (!fs.existsSync(targetPath)) {
@@ -55,19 +33,15 @@ class WorkspaceTreeDataProvider {
                 const fullPath = path.join(targetPath, entry.name);
                 const uri = vscode.Uri.file(fullPath);
                 if (entry.isDirectory()) {
-                    items.push(new WorkspaceItem(entry.name, uri, vscode.TreeItemCollapsibleState.Collapsed, true));
+                    items.push(new workspaceItemModel_1.WorkspaceItem(entry.name, uri, vscode.TreeItemCollapsibleState.Collapsed, true));
                 }
-                else if (entry.isFile()) {
-                    if (this.validateExtension(entry.name)) {
-                        items.push(new WorkspaceItem(entry.name, uri, vscode.TreeItemCollapsibleState.None, false));
-                    }
+                else if (entry.isFile() && this.validateExtension(entry.name)) {
+                    items.push(new workspaceItemModel_1.WorkspaceItem(entry.name, uri, vscode.TreeItemCollapsibleState.None, false));
                 }
             }
-            // Ordenar: Carpetas primero, luego archivos alfabéticamente
             return items.sort((a, b) => {
-                if (a.isFolder === b.isFolder) {
+                if (a.isFolder === b.isFolder)
                     return a.label.localeCompare(b.label);
-                }
                 return a.isFolder ? -1 : 1;
             });
         }
@@ -79,9 +53,7 @@ class WorkspaceTreeDataProvider {
         if (this.category === "notes") {
             return fileName.endsWith(".md") && !fileName.endsWith(".prompt.md");
         }
-        else {
-            return fileName.endsWith(".prompt.md");
-        }
+        return fileName.endsWith(".prompt.md");
     }
     getGlobalCategoryPath() {
         const config = vscode.workspace.getConfiguration("fhizxAiTools");
@@ -91,5 +63,5 @@ class WorkspaceTreeDataProvider {
         return path.join(globalPath, this.category);
     }
 }
-exports.WorkspaceTreeDataProvider = WorkspaceTreeDataProvider;
-//# sourceMappingURL=treeDataProvider.js.map
+exports.workspaceTreeDataProvider = workspaceTreeDataProvider;
+//# sourceMappingURL=workspaceTreeDataProvider.js.map

@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
+import { InstallationService } from "../services/installationService";
 
 export class workspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -44,15 +45,23 @@ export class workspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
               uri,
               vscode.TreeItemCollapsibleState.Collapsed,
               true,
+              this.category,
+              false,
             ),
           );
         } else if (entry.isFile() && this.validateExtension(entry.name)) {
+          const isInstalled = InstallationService.isInstalled(
+            entry.name,
+            this.category,
+          );
           items.push(
             new WorkspaceItem(
               entry.name,
               uri,
               vscode.TreeItemCollapsibleState.None,
               false,
+              this.category,
+              isInstalled,
             ),
           );
         }

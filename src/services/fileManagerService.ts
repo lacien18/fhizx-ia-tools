@@ -81,7 +81,7 @@ export class FileManagerService {
     });
     if (!name) return;
 
-    const isNote = category === "notes";
+    const isNote = category === "notes" || category;
     const extension = isNote ? ".md" : ".prompt.md";
     const prefixes: Record<CategoryType, string> = {
       prompts: "p-",

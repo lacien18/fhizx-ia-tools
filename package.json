@@ -33,8 +33,8 @@
           "icon": ""
         },
         {
-          "id": "fhizxAiTools.prompts",
-          "name": "Prompts",
+          "id": "fhizxAiTools.tokenCounter",
+          "name": "Token Counter",
           "icon": ""
         },
         {
@@ -48,8 +48,8 @@
           "icon": ""
         },
         {
-          "id": "fhizxAiTools.tokenCounter",
-          "name": "Token Counter",
+          "id": "fhizxAiTools.prompts",
+          "name": "Prompts",
           "icon": ""
         }
       ]
@@ -149,6 +149,16 @@
       {
         "command": "fhizxAiTools.checkForUpdates",
         "title": "FhizxAITools: Buscar Actualizaciones"
+      },
+      {
+        "command": "fhizxAiTools.installItem",
+        "title": "Instalar",
+        "icon": "$(add)"
+      },
+      {
+        "command": "fhizxAiTools.uninstallItem",
+        "title": "Desinstalar",
+        "icon": "$(remove)"
       }
     ],
     "menus": {
@@ -207,12 +217,12 @@
       "view/item/context": [
         {
           "command": "fhizxAiTools.sendToChat",
-          "when": "viewItem == file",
+          "when": "viewItem == file_uninstalled || viewItem == file_installed",
           "group": "inline@1"
         },
         {
           "command": "fhizxAiTools.copyToClipboard",
-          "when": "viewItem == file",
+          "when": "viewItem == file_uninstalled || viewItem == file_installed",
           "group": "inline@2"
         },
         {
@@ -227,13 +237,23 @@
         },
         {
           "command": "fhizxAiTools.renameItem",
-          "when": "viewItem == file || viewItem == folder",
+          "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",
           "group": "inline@3"
         },
         {
           "command": "fhizxAiTools.deleteItem",
-          "when": "viewItem == file || viewItem == folder",
+          "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",
           "group": "inline@4"
+        },
+        {
+          "command": "fhizxAiTools.installItem",
+          "when": "view != fhizxAiTools.notes && view != fhizxAiTools.tokenCounter",
+          "group": "inline@5"
+        },
+        {
+          "command": "fhizxAiTools.uninstallItem",
+          "when": "view != fhizxAiTools.notes && view != fhizxAiTools.tokenCounter",
+          "group": "inline@5"
         }
       ],
       "editor/context": [

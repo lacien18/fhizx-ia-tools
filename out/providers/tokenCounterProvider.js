@@ -49,16 +49,16 @@ class TokenCounterTreeDataProvider {
         const costSonnet = (exactTokens / 1_000_000) * 3.0;
         const costGemini = (exactTokens / 1_000_000) * 0.1;
         return [
-            new tokenStatItemModel_1.TokenStatItem("📁 Archivo:", fileName, "file"),
-            new tokenStatItemModel_1.TokenStatItem("🔢 Tokens Exactos:", exactTokens.toLocaleString(), "symbol-number"),
-            new tokenStatItemModel_1.TokenStatItem("📏 Caracteres:", charCount.toLocaleString(), "text-size"),
-            new tokenStatItemModel_1.TokenStatItem("📖 Palabras:", wordCount.toLocaleString(), "book"),
-            new tokenStatItemModel_1.TokenStatItem("📄 Líneas:", lineCount.toLocaleString(), "list-ordered"),
-            new tokenStatItemModel_1.TokenStatItem("--- COSTS BY MODEL ---", "", ""),
-            new tokenStatItemModel_1.TokenStatItem("🟢 GPT-4o:", `$${costGPT4o.toFixed(5)}`, "credit-card"),
-            new tokenStatItemModel_1.TokenStatItem("🔵 GPT-4o Mini:", `$${costMini.toFixed(5)}`, "credit-card"),
-            new tokenStatItemModel_1.TokenStatItem("🟠 Claude 3.5 Sonnet:", `$${costSonnet.toFixed(5)}`, "credit-card"),
-            new tokenStatItemModel_1.TokenStatItem("🟣 Gemini Flash:", `$${costGemini.toFixed(5)}`, "credit-card"),
+            new tokenStatItemModel_1.TokenStatItem("📁 Archivo:", fileName, ""),
+            new tokenStatItemModel_1.TokenStatItem("🔢 Tokens Exactos:", exactTokens.toLocaleString(), ""),
+            new tokenStatItemModel_1.TokenStatItem("📏 Caracteres:", charCount.toLocaleString(), ""),
+            new tokenStatItemModel_1.TokenStatItem("📖 Palabras:", wordCount.toLocaleString(), ""),
+            new tokenStatItemModel_1.TokenStatItem("📄 Líneas:", lineCount.toLocaleString(), ""),
+            new tokenStatItemModel_1.TokenStatItem("--- 📉 COSTS BY MODEL 📉  ---", "", ""),
+            new tokenStatItemModel_1.TokenStatItem("🟢 GPT-4o:", `$${costGPT4o.toFixed(5)}`, ""),
+            new tokenStatItemModel_1.TokenStatItem("🔵 GPT-4o Mini:", `$${costMini.toFixed(5)}`, ""),
+            new tokenStatItemModel_1.TokenStatItem("🟠 Claude 3.5 Sonnet:", `$${costSonnet.toFixed(5)}`, ""),
+            new tokenStatItemModel_1.TokenStatItem("🟣 Gemini Flash:", `$${costGemini.toFixed(5)}`, ""),
         ];
     }
 }

@@ -161,6 +161,13 @@
         "icon": "$(remove)"
       }
     ],
+    "submenus": [
+      {
+        "id": "fhizxAiTools.itemMenu",
+        "label": "Opciones",
+        "icon": "$(kebab-vertical)"
+      }
+    ],
     "menus": {
       "view/title": [
         {
@@ -216,44 +223,49 @@
       ],
       "view/item/context": [
         {
+          "submenu": "fhizxAiTools.itemMenu",
+          "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",
+          "group": "inline"
+        }
+      ],
+      "fhizxAiTools.itemMenu": [
+        {
           "command": "fhizxAiTools.sendToChat",
           "when": "viewItem == file_uninstalled || viewItem == file_installed",
-          "group": "inline@1"
+          "group": "1_actions@1"
         },
         {
           "command": "fhizxAiTools.copyToClipboard",
           "when": "viewItem == file_uninstalled || viewItem == file_installed",
-          "group": "inline@2"
+          "group": "1_actions@2"
+        },
+        {
+          "command": "fhizxAiTools.installItem",
+          "when": "viewItem == file_uninstalled && view != fhizxAiTools.notes && view != fhizxAiTools.tokenCounter",
+          "group": "2_installation@1"
+        },
+        {
+          "command": "fhizxAiTools.uninstallItem",
+          "when": "viewItem == file_installed && view != fhizxAiTools.notes && view != fhizxAiTools.tokenCounter",
+          "group": "2_installation@2"
         },
         {
           "command": "fhizxAiTools.createFileContext",
           "when": "viewItem == folder",
-          "group": "inline@1"
+          "group": "1_actions@1"
         },
         {
           "command": "fhizxAiTools.createFolderContext",
           "when": "viewItem == folder",
-          "group": "inline@2"
+          "group": "1_actions@2"
         },
         {
           "command": "fhizxAiTools.renameItem",
-          "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",
-          "group": "inline@3"
+          "group": "3_management@1"
         },
         {
           "command": "fhizxAiTools.deleteItem",
-          "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",
-          "group": "inline@4"
-        },
-        {
-          "command": "fhizxAiTools.installItem",
-          "when": "view != fhizxAiTools.notes && view != fhizxAiTools.tokenCounter",
-          "group": "inline@5"
-        },
-        {
-          "command": "fhizxAiTools.uninstallItem",
-          "when": "view != fhizxAiTools.notes && view != fhizxAiTools.tokenCounter",
-          "group": "inline@5"
+          "group": "3_management@2"
         }
       ],
       "editor/context": [

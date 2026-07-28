@@ -70,7 +70,7 @@
       {
         "command": "fhizxAiTools.sendToChat",
         "title": "Enviar al Chat de IA",
-        "icon": "$(sparkle)"
+        "icon": "$(wand)"
       },
       {
         "command": "fhizxAiTools.refresh",

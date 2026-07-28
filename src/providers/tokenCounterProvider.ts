@@ -60,44 +60,20 @@ export class TokenCounterTreeDataProvider implements vscode.TreeDataProvider<Tok
     const costGemini = (exactTokens / 1_000_000) * 0.1;
 
     return [
-      new TokenStatItem("📁 Archivo:", fileName, "file"),
-      new TokenStatItem(
-        "🔢 Tokens Exactos:",
-        exactTokens.toLocaleString(),
-        "symbol-number",
-      ),
-      new TokenStatItem(
-        "📏 Caracteres:",
-        charCount.toLocaleString(),
-        "text-size",
-      ),
-      new TokenStatItem("📖 Palabras:", wordCount.toLocaleString(), "book"),
-      new TokenStatItem(
-        "📄 Líneas:",
-        lineCount.toLocaleString(),
-        "list-ordered",
-      ),
-      new TokenStatItem("--- COSTS BY MODEL ---", "", ""),
-      new TokenStatItem(
-        "🟢 GPT-4o:",
-        `$${costGPT4o.toFixed(5)}`,
-        "credit-card",
-      ),
-      new TokenStatItem(
-        "🔵 GPT-4o Mini:",
-        `$${costMini.toFixed(5)}`,
-        "credit-card",
-      ),
+      new TokenStatItem("📁 Archivo:", fileName, ""),
+      new TokenStatItem("🔢 Tokens Exactos:", exactTokens.toLocaleString(), ""),
+      new TokenStatItem("📏 Caracteres:", charCount.toLocaleString(), ""),
+      new TokenStatItem("📖 Palabras:", wordCount.toLocaleString(), ""),
+      new TokenStatItem("📄 Líneas:", lineCount.toLocaleString(), ""),
+      new TokenStatItem("--- 📉 COSTS BY MODEL 📉  ---", "", ""),
+      new TokenStatItem("🟢 GPT-4o:", `$${costGPT4o.toFixed(5)}`, ""),
+      new TokenStatItem("🔵 GPT-4o Mini:", `$${costMini.toFixed(5)}`, ""),
       new TokenStatItem(
         "🟠 Claude 3.5 Sonnet:",
         `$${costSonnet.toFixed(5)}`,
-        "credit-card",
+        "",
       ),
-      new TokenStatItem(
-        "🟣 Gemini Flash:",
-        `$${costGemini.toFixed(5)}`,
-        "credit-card",
-      ),
+      new TokenStatItem("🟣 Gemini Flash:", `$${costGemini.toFixed(5)}`, ""),
     ];
   }
 }

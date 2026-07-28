@@ -2,7 +2,7 @@
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
   "description": "Gestiona prompts, agents, skills y notas para herramientas de IA",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "engines": {
     "vscode": "^1.85.0"
   },

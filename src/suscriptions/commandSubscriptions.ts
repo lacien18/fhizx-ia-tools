@@ -41,6 +41,7 @@ export function registerCommands(
             query: `Usa el siguiente recurso (${fileName}):\n\n${content}`,
           });
         } catch {
+          // Fallback if chat doesn't support query or something goes wrong
           await vscode.env.clipboard.writeText(content);
           vscode.commands.executeCommand("workbench.action.chat.open");
           vscode.window.showInformationMessage(
@@ -50,9 +51,24 @@ export function registerCommands(
       },
     ),
 
+    vscode.commands.registerCommand("fhizxAiTools.copyToClipboard", async (node?: WorkspaceItem | vscode.Uri) => {
+       let filePath = "";
+       if (node && "resourceUri" in node) filePath = node.resourceUri.fsPath;
+       else if (node instanceof vscode.Uri) filePath = node.fsPath;
+       else if (vscode.window.activeTextEditor)
+         filePath = vscode.window.activeTextEditor.document.fileName;
+
+       if (!filePath || !fs.existsSync(filePath)) {
+         return;
+       }
+
+       const content = fs.readFileSync(filePath, "utf-8");
+       await vscode.env.clipboard.writeText(content);
+    }),
+
     vscode.commands.registerCommand("fhizxAiTools.refresh", () => {
       refreshAll();
-      vscode.window.showInformationMessage("Archivos y carpetas actualizados");
+      vscode.window.showInformationMessage("Archivos y carpetas actualizadas");
     }),
 
     vscode.commands.registerCommand("fhizxAiTools.setGlobalPath", async () => {
@@ -97,8 +113,8 @@ export function registerCommands(
       ),
       vscode.commands.registerCommand(
         `fhizxAiTools.create${cat.charAt(0).toUpperCase() + cat.slice(1, -1)}Folder`,
-        () => fileManager.createNewFolder(cat, refreshAll),
-      ),
+         () => fileManager.createNewFolder(cat, refreshAll),
+       ),
     ]),
 
     vscode.commands.registerCommand(

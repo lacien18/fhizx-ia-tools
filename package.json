@@ -63,6 +63,11 @@
     ],
     "commands": [
       {
+        "command": "fhizxAiTools.copyToClipboard",
+        "title": "Copiar en portapapeles",
+        "icon": "$(copy)"
+      },
+      {
         "command": "fhizxAiTools.sendToChat",
         "title": "Enviar al Chat de IA",
         "icon": "$(sparkle)"
@@ -204,6 +209,11 @@
           "command": "fhizxAiTools.sendToChat",
           "when": "viewItem == file",
           "group": "inline@1"
+        },
+        {
+          "command": "fhizxAiTools.copyToClipboard",
+          "when": "viewItem == file",
+          "group": "inline@2"
         },
         {
           "command": "fhizxAiTools.createFileContext",

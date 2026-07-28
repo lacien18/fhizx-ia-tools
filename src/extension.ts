@@ -5,6 +5,11 @@ import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
 import { registerCommands } from "./suscriptions/commandSubscriptions";
 
+class EmptyTreeDataProvider implements vscode.TreeDataProvider<any> {
+  getTreeItem(element: any): vscode.TreeItem { return element; }
+  getChildren(): Thenable<any[]> { return Promise.resolve([]); }
+}
+
 export function activate(context: vscode.ExtensionContext) {
   // 1. Inicialización de Providers
   const providers = {
@@ -16,6 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   // Registro de DataProviders en la UI de VS Code
+  vscode.window.registerTreeDataProvider(
+    "fhizxAiTools.info",
+    new EmptyTreeDataProvider()
+  );
   vscode.window.registerTreeDataProvider(
     "fhizxAiTools.prompts",
     providers.prompts,

@@ -81,20 +81,12 @@ export class FileManagerService {
     });
     if (!name) return;
 
-    const isNote = category === "notes" || category;
+    const isNote = category === "notes";
     const extension = isNote ? ".md" : ".prompt.md";
-    const prefixes: Record<CategoryType, string> = {
-      prompts: "p-",
-      agents: "a-",
-      skills: "s-",
-      notes: "",
-    };
-    const prefix = prefixes[category];
 
     let cleanName = name.trim();
     if (cleanName.endsWith(extension))
       cleanName = cleanName.slice(0, -extension.length);
-    if (prefix && !cleanName.startsWith(prefix)) cleanName = prefix + cleanName;
 
     const filePath = path.join(basePath, `${cleanName}${extension}`);
     if (fs.existsSync(filePath)) {

@@ -188,27 +188,26 @@ export function registerCommands(
 
     vscode.commands.registerCommand(
       "fhizxAiTools.installItem",
-      (node: WorkspaceItem) => {
+      async (node: WorkspaceItem) => {
         if (node && node.category) {
-          import("../services/installationService").then((module) => {
-            module.InstallationService.installItem(node, node.category);
-            refreshAll();
-          });
+          const { InstallationService } = await import("../services/installationService");
+          await InstallationService.installItem(node, node.category);
+          refreshAll();
         }
       },
     ),
 
     vscode.commands.registerCommand(
       "fhizxAiTools.uninstallItem",
-      (node: WorkspaceItem) => {
+      async (node: WorkspaceItem) => {
         if (node && node.category) {
-          import("../services/installationService").then((module) => {
-            module.InstallationService.uninstallItem(node, node.category);
-            refreshAll();
-          });
+          const { InstallationService } = await import("../services/installationService");
+          await InstallationService.uninstallItem(node, node.category);
+          refreshAll();
         }
       },
     ),
+
 
     vscode.commands.registerCommand("fhizxAiTools.checkForUpdates", () => {
       vscode.window.showInformationMessage(

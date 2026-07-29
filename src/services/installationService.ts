@@ -9,32 +9,60 @@ export class InstallationService {
     return path.join(os.homedir(), ".vscode", "github-copilot", category);
   }
 
+  private static getTargetFileName(fileName: string): string {
+    if (fileName.endsWith(".prompt.md")) return fileName;
+    return fileName.replace(/\.instructions\.md$|\.md$/, "") + ".prompt.md";
+  }
+
   public static isInstalled(fileName: string, category: string): boolean {
-    const targetPath = path.join(this.getCopilotGlobalPath(category), fileName);
+    const targetFileName = this.getTargetFileName(fileName);
+    const targetPath = path.join(this.getCopilotGlobalPath(category), targetFileName);
     return fs.existsSync(targetPath);
   }
 
-  public static installItem(node: WorkspaceItem, category: string) {
+  private static async updateCopilotConfig(targetDir: string) {
+    try {
+      const config = vscode.workspace.getConfiguration();
+
+      // Update locations for prompt files
+      const locations = config.get<Record<string, boolean>>("chat.promptFilesLocations") || {};
+      
+      if (!locations[targetDir]) {
+        const updatedLocations = { ...locations, [targetDir]: true };
+        await config.update("chat.promptFilesLocations", updatedLocations, vscode.ConfigurationTarget.Global);
+      }
+    } catch (err) {
+      // Silently ignore if the setting is not registered in this VS Code version
+      console.warn("FhizxAITools: Could not update prompt files config", err);
+    }
+  }
+
+  public static async installItem(node: WorkspaceItem, category: string) {
     if (node.isFolder) return;
     const sourcePath = node.resourceUri.fsPath;
     const targetDir = this.getCopilotGlobalPath(category);
-    const targetPath = path.join(targetDir, node.label);
+    
+    const targetFileName = this.getTargetFileName(node.label);
+    const targetPath = path.join(targetDir, targetFileName);
 
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }
 
     fs.copyFileSync(sourcePath, targetPath);
-    vscode.window.showInformationMessage(`Instalado en Copilot: ${node.label}`);
+    await this.updateCopilotConfig(targetDir);
+    vscode.window.showInformationMessage(`Instalado en Copilot: ${targetFileName}`);
   }
 
-  public static uninstallItem(node: WorkspaceItem, category: string) {
+  public static async uninstallItem(node: WorkspaceItem, category: string) {
     if (node.isFolder) return;
-    const targetPath = path.join(this.getCopilotGlobalPath(category), node.label);
+    const targetDir = this.getCopilotGlobalPath(category);
+    const targetFileName = this.getTargetFileName(node.label);
+    const targetPath = path.join(targetDir, targetFileName);
 
     if (fs.existsSync(targetPath)) {
       fs.unlinkSync(targetPath);
-      vscode.window.showInformationMessage(`Desinstalado de Copilot: ${node.label}`);
+      vscode.window.showInformationMessage(`Desinstalado de Copilot: ${targetFileName}`);
     }
   }
 }

@@ -72,6 +72,40 @@ export function activate(context: vscode.ExtensionContext) {
         }
       });
   }
+
+  // 5. Registrar rutas de prompt files en Copilot al activarse
+  ensureCopilotPromptConfig();
 }
 
 export function deactivate() {}
+
+async function ensureCopilotPromptConfig() {
+  try {
+    const os = await import("os");
+    const path = await import("path");
+    const fs = await import("fs");
+
+    const copilotBase = path.join(os.homedir(), ".vscode", "github-copilot");
+    const categories = ["prompts", "agents", "skills"];
+    const config = vscode.workspace.getConfiguration();
+
+    // Register each existing category directory
+    const locations = config.get<Record<string, boolean>>("chat.promptFilesLocations") || {};
+    let updated = false;
+
+    for (const cat of categories) {
+      const catPath = path.join(copilotBase, cat);
+      if (fs.existsSync(catPath) && !locations[catPath]) {
+        locations[catPath] = true;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      await config.update("chat.promptFilesLocations", locations, vscode.ConfigurationTarget.Global);
+    }
+  } catch (err) {
+    // Silently ignore if prompt file settings are not registered in this VS Code version
+    console.warn("FhizxAITools: Could not update prompt files config", err);
+  }
+}

@@ -11,22 +11,24 @@ export class WorkspaceItem extends vscode.TreeItem {
   ) {
     super(resourceUri, collapsibleState);
 
-    if (isFolder || category == "notes") {
+    if (isFolder) {
       this.contextValue = "folder";
     } else {
       this.contextValue = isInstalled ? "file_installed" : "file_uninstalled";
 
-      // Configurar iconos para mostrar el estado de instalación (verde si instalado, rojo si no)
-      if (isInstalled) {
-        this.iconPath = new vscode.ThemeIcon(
-          "check",
-          new vscode.ThemeColor("testing.iconPassed"),
-        );
-      } else {
-        this.iconPath = new vscode.ThemeIcon(
-          "close",
-          new vscode.ThemeColor("testing.iconFailed"),
-        );
+      if (category !== "notes") {
+        // Configurar iconos para mostrar el estado de instalación (verde si instalado, rojo si no)
+        if (isInstalled) {
+          this.iconPath = new vscode.ThemeIcon(
+            "check",
+            new vscode.ThemeColor("testing.iconPassed"),
+          );
+        } else {
+          this.iconPath = new vscode.ThemeIcon(
+            "close",
+            new vscode.ThemeColor("testing.iconFailed"),
+          );
+        }
       }
 
       this.command = {

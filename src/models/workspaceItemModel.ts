@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { COMMANDS } from "../constants";
 
 export class WorkspaceItem extends vscode.TreeItem {
   constructor(
@@ -32,7 +33,7 @@ export class WorkspaceItem extends vscode.TreeItem {
       }
 
       this.command = {
-        command: "fhizxAiTools.openFile",
+        command: COMMANDS.OPEN_FILE,
         title: "Abrir Archivo",
         arguments: [resourceUri],
       };

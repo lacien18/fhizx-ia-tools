@@ -3,22 +3,18 @@ import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
 import { FileManagerService } from "../services/fileManagerService";
+import { CATEGORIES, COMMANDS, CONFIG_NAMESPACE, CONFIG_KEYS } from "../constants";
 
 export function registerCommands(
   context: vscode.ExtensionContext,
   fileManager: FileManagerService,
   refreshAll: () => void,
 ) {
-  const categories: ("prompts" | "agents" | "skills" | "notes")[] = [
-    "prompts",
-    "agents",
-    "skills",
-    "notes",
-  ];
+  const categories = CATEGORIES;
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "fhizxAiTools.sendToChat",
+      COMMANDS.SEND_TO_CHAT,
       async (node?: WorkspaceItem | vscode.Uri) => {
         let filePath = "";
         if (node && "resourceUri" in node) filePath = node.resourceUri.fsPath;
@@ -70,12 +66,12 @@ export function registerCommands(
       },
     ),
 
-    vscode.commands.registerCommand("fhizxAiTools.refresh", () => {
+    vscode.commands.registerCommand(COMMANDS.REFRESH, () => {
       refreshAll();
       vscode.window.showInformationMessage("Archivos y carpetas actualizadas");
     }),
 
-    vscode.commands.registerCommand("fhizxAiTools.setGlobalPath", async () => {
+    vscode.commands.registerCommand(COMMANDS.SET_GLOBAL_PATH, async () => {
       const uri = await vscode.window.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
@@ -84,9 +80,9 @@ export function registerCommands(
       if (uri && uri[0]) {
         const selectedPath = uri[0].fsPath;
         await vscode.workspace
-          .getConfiguration("fhizxAiTools")
+          .getConfiguration(CONFIG_NAMESPACE)
           .update(
-            "globalPath",
+            CONFIG_KEYS.GLOBAL_PATH,
             selectedPath,
             vscode.ConfigurationTarget.Global,
           );
@@ -105,7 +101,7 @@ export function registerCommands(
     }),
 
     vscode.commands.registerCommand(
-      "fhizxAiTools.openFile",
+      COMMANDS.OPEN_FILE,
       (uri: vscode.Uri) => vscode.window.showTextDocument(uri),
     ),
 

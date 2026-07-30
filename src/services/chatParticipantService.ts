@@ -2,18 +2,19 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { FileManagerService } from "./fileManagerService";
+import { CHAT_PARTICIPANT_ID, CONFIG_NAMESPACE, CONFIG_KEYS, COPILOT_CATEGORIES } from "../constants";
 
 export function registerChatParticipant(
   context: vscode.ExtensionContext,
   fileManager: FileManagerService,
 ) {
   const chatParticipant = vscode.chat.createChatParticipant(
-    "fhizx-ai-tools.participant",
+    CHAT_PARTICIPANT_ID,
     async (request, context, response) => {
       const promptQuery = request.prompt.trim();
       const globalPath = vscode.workspace
-        .getConfiguration("fhizxAiTools")
-        .get<string>("globalPath");
+        .getConfiguration(CONFIG_NAMESPACE)
+        .get<string>(CONFIG_KEYS.GLOBAL_PATH);
 
       if (!globalPath) {
         response.markdown("Configura la ruta global de la extensión primero.");
@@ -23,20 +24,15 @@ export function registerChatParticipant(
       const match = promptQuery.match(/usar\s+(.+)/i);
       if (match) {
         const promptName = match[1].trim();
-        let promptFilePath = fileManager.findFileRecursive(
-          path.join(globalPath, "prompts"),
-          promptName,
-        );
-        if (!promptFilePath)
+        let promptFilePath: string | null = null;
+
+        for (const cat of COPILOT_CATEGORIES) {
           promptFilePath = fileManager.findFileRecursive(
-            path.join(globalPath, "agents"),
+            path.join(globalPath, cat),
             promptName,
           );
-        if (!promptFilePath)
-          promptFilePath = fileManager.findFileRecursive(
-            path.join(globalPath, "skills"),
-            promptName,
-          );
+          if (promptFilePath) break;
+        }
 
         if (promptFilePath && fs.existsSync(promptFilePath)) {
           const content = fs.readFileSync(promptFilePath, "utf-8");

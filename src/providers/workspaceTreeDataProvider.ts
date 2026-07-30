@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
 import { InstallationService } from "../services/installationService";
+import { CONFIG_NAMESPACE, CONFIG_KEYS } from "../constants";
 
 export class workspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -84,8 +85,8 @@ export class workspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
   }
 
   public getGlobalCategoryPath(): string | undefined {
-    const config = vscode.workspace.getConfiguration("fhizxAiTools");
-    const globalPath = config.get<string>("globalPath");
+    const config = vscode.workspace.getConfiguration(CONFIG_NAMESPACE);
+    const globalPath = config.get<string>(CONFIG_KEYS.GLOBAL_PATH);
     if (!globalPath || globalPath.trim() === "") return undefined;
     return path.join(globalPath, this.category);
   }

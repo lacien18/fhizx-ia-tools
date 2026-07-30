@@ -4,6 +4,7 @@ import { TokenCounterTreeDataProvider } from "./providers/tokenCounterProvider";
 import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
 import { registerCommands } from "./suscriptions/commandSubscriptions";
+import { CONFIG_NAMESPACE, CONFIG_KEYS, COMMANDS, COPILOT_CATEGORIES } from "./constants";
 
 class EmptyTreeDataProvider implements vscode.TreeDataProvider<any> {
   getTreeItem(element: any): vscode.TreeItem { return element; }
@@ -59,8 +60,8 @@ export function activate(context: vscode.ExtensionContext) {
   registerCommands(context, fileManager, refreshAll);
 
   // 4. Verificación inicial de configuración global
-  const config = vscode.workspace.getConfiguration("fhizxAiTools");
-  if (!config.get<string>("globalPath")) {
+  const config = vscode.workspace.getConfiguration(CONFIG_NAMESPACE);
+  if (!config.get<string>(CONFIG_KEYS.GLOBAL_PATH)) {
     vscode.window
       .showInformationMessage(
         "Bienvenido a FhizxAITools. Selecciona tu ruta de almacenamiento global.",
@@ -68,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
       )
       .then((selection) => {
         if (selection === "Seleccionar Ruta") {
-          vscode.commands.executeCommand("fhizxAiTools.setGlobalPath");
+          vscode.commands.executeCommand(COMMANDS.SET_GLOBAL_PATH);
         }
       });
   }
@@ -86,11 +87,11 @@ async function ensureCopilotPromptConfig() {
     const fs = await import("fs");
 
     const copilotBase = path.join(os.homedir(), ".vscode", "github-copilot");
-    const categories = ["prompts", "agents", "skills"];
+    const categories = COPILOT_CATEGORIES;
     const config = vscode.workspace.getConfiguration();
 
     // Register each existing category directory
-    const locations = config.get<Record<string, boolean>>("chat.promptFilesLocations") || {};
+    const locations = config.get<Record<string, boolean>>(CONFIG_KEYS.PROMPT_FILES_LOCATIONS) || {};
     let updated = false;
 
     for (const cat of categories) {
@@ -102,7 +103,7 @@ async function ensureCopilotPromptConfig() {
     }
 
     if (updated) {
-      await config.update("chat.promptFilesLocations", locations, vscode.ConfigurationTarget.Global);
+      await config.update(CONFIG_KEYS.PROMPT_FILES_LOCATIONS, locations, vscode.ConfigurationTarget.Global);
     }
   } catch (err) {
     // Silently ignore if prompt file settings are not registered in this VS Code version

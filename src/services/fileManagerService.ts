@@ -2,14 +2,9 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
+import { FILE_PREFIXES, CATEGORIES } from "../constants";
 
 export type CategoryType = "prompts" | "agents" | "skills" | "notes";
-
-const prefix = {
-  prompts: "p-",
-  agents: "a-",
-  skills: "s-",
-} as const;
 
 export class FileManagerService {
   constructor(
@@ -17,7 +12,7 @@ export class FileManagerService {
   ) {}
 
   getCategoryFromPath(targetPath: string): CategoryType {
-    for (const key of ["prompts", "agents", "skills", "notes"] as const) {
+    for (const key of CATEGORIES) {
       const catPath = this.providers[key].getGlobalCategoryPath();
       if (catPath && targetPath.startsWith(catPath)) return key;
     }
@@ -94,9 +89,9 @@ export class FileManagerService {
     if (cleanName.endsWith(extension))
       cleanName = cleanName.slice(0, -extension.length);
 
-    const dataPrefix = new Map<string, string>(Object.entries(prefix));
+    const dataPrefix = new Map<string, string>(Object.entries(FILE_PREFIXES));
 
-    const prefixForfile = dataPrefix.get(category);
+    const prefixForfile = dataPrefix.get(category) || "";
 
     const filePath = path.join(
       basePath,

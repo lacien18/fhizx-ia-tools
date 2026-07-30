@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { WorkspaceItem } from "../models/workspaceItemModel";
+import { CONFIG_KEYS } from "../constants";
 
 export class InstallationService {
   public static getCopilotGlobalPath(category: string): string {
@@ -25,11 +26,11 @@ export class InstallationService {
       const config = vscode.workspace.getConfiguration();
 
       // Update locations for prompt files
-      const locations = config.get<Record<string, boolean>>("chat.promptFilesLocations") || {};
+      const locations = config.get<Record<string, boolean>>(CONFIG_KEYS.PROMPT_FILES_LOCATIONS) || {};
       
       if (!locations[targetDir]) {
         const updatedLocations = { ...locations, [targetDir]: true };
-        await config.update("chat.promptFilesLocations", updatedLocations, vscode.ConfigurationTarget.Global);
+        await config.update(CONFIG_KEYS.PROMPT_FILES_LOCATIONS, updatedLocations, vscode.ConfigurationTarget.Global);
       }
     } catch (err) {
       // Silently ignore if the setting is not registered in this VS Code version

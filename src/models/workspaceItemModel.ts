@@ -21,12 +21,12 @@ export class WorkspaceItem extends vscode.TreeItem {
         // Configurar iconos para mostrar el estado de instalación (verde si instalado, rojo si no)
         if (isInstalled) {
           this.iconPath = new vscode.ThemeIcon(
-            "check",
+            "testing-passed-icon",
             new vscode.ThemeColor("testing.iconPassed"),
           );
         } else {
           this.iconPath = new vscode.ThemeIcon(
-            "close",
+            "notebook-state-error",
             new vscode.ThemeColor("testing.iconFailed"),
           );
         }

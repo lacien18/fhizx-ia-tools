@@ -4,11 +4,20 @@ import { TokenCounterTreeDataProvider } from "./providers/tokenCounterProvider";
 import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
 import { registerCommands } from "./suscriptions/commandSubscriptions";
-import { CONFIG_NAMESPACE, CONFIG_KEYS, COMMANDS, COPILOT_CATEGORIES } from "./constants";
+import {
+  CONFIG_NAMESPACE,
+  CONFIG_KEYS,
+  COMMANDS,
+  COPILOT_CATEGORIES,
+} from "./constants";
 
 class EmptyTreeDataProvider implements vscode.TreeDataProvider<any> {
-  getTreeItem(element: any): vscode.TreeItem { return element; }
-  getChildren(): Thenable<any[]> { return Promise.resolve([]); }
+  getTreeItem(element: any): vscode.TreeItem {
+    return element;
+  }
+  getChildren(): Thenable<any[]> {
+    return Promise.resolve([]);
+  }
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -24,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Registro de DataProviders en la UI de VS Code
   vscode.window.registerTreeDataProvider(
     "fhizxAiTools.info",
-    new EmptyTreeDataProvider()
+    new EmptyTreeDataProvider(),
   );
   vscode.window.registerTreeDataProvider(
     "fhizxAiTools.prompts",
@@ -91,7 +100,9 @@ async function ensureCopilotPromptConfig() {
     const config = vscode.workspace.getConfiguration();
 
     // Register each existing category directory
-    const locations = config.get<Record<string, boolean>>(CONFIG_KEYS.PROMPT_FILES_LOCATIONS) || {};
+    const locations =
+      config.get<Record<string, boolean>>(CONFIG_KEYS.PROMPT_FILES_LOCATIONS) ||
+      {};
     let updated = false;
 
     for (const cat of categories) {
@@ -103,7 +114,11 @@ async function ensureCopilotPromptConfig() {
     }
 
     if (updated) {
-      await config.update(CONFIG_KEYS.PROMPT_FILES_LOCATIONS, locations, vscode.ConfigurationTarget.Global);
+      await config.update(
+        CONFIG_KEYS.PROMPT_FILES_LOCATIONS,
+        locations,
+        vscode.ConfigurationTarget.Global,
+      );
     }
   } catch (err) {
     // Silently ignore if prompt file settings are not registered in this VS Code version

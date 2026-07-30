@@ -29,32 +29,32 @@
       "fhizx-ai-tools-container": [
         {
           "id": "fhizxAiTools.info",
-          "name": "Información",
+          "name": "ℹ️ Información",
           "icon": ""
         },
         {
           "id": "fhizxAiTools.notes",
-          "name": "Notes",
+          "name": "📓 Notes",
           "icon": ""
         },
         {
           "id": "fhizxAiTools.tokenCounter",
-          "name": "Token Counter",
+          "name": "🔢 Token Counter",
           "icon": ""
         },
         {
           "id": "fhizxAiTools.agents",
-          "name": "Agents",
+          "name": "🤖 Agents",
           "icon": ""
         },
         {
           "id": "fhizxAiTools.skills",
-          "name": "Skills",
+          "name": "🚀 Skills",
           "icon": ""
         },
         {
           "id": "fhizxAiTools.prompts",
-          "name": "Prompts",
+          "name": "📝 Prompts",
           "icon": ""
         }
       ]

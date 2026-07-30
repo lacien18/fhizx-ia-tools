@@ -36,7 +36,11 @@ export class TokenCounterTreeDataProvider implements vscode.TreeDataProvider<Tok
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       return [
-        new TokenStatItem("Sin archivo activo", "Abre un archivo", "info"),
+        new TokenStatItem(
+          "Sin archivo activo",
+          "Abre un archivo",
+          "output-view-icon",
+        ),
       ];
     }
 

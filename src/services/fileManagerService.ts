@@ -5,6 +5,12 @@ import { WorkspaceItem } from "../models/workspaceItemModel";
 
 export type CategoryType = "prompts" | "agents" | "skills" | "notes";
 
+const prefix = {
+  prompts: "p-",
+  agents: "a-",
+  skills: "s-",
+} as const;
+
 export class FileManagerService {
   constructor(
     private providers: Record<CategoryType | "tokenCounterProvider", any>,
@@ -88,7 +94,14 @@ export class FileManagerService {
     if (cleanName.endsWith(extension))
       cleanName = cleanName.slice(0, -extension.length);
 
-    const filePath = path.join(basePath, `${cleanName}${extension}`);
+    const dataPrefix = new Map<string, string>(Object.entries(prefix));
+
+    const prefixForfile = dataPrefix.get(category);
+
+    const filePath = path.join(
+      basePath,
+      `${prefixForfile}${cleanName}${extension}`,
+    );
     if (fs.existsSync(filePath)) {
       vscode.window.showErrorMessage("El archivo ya existe.");
       return;

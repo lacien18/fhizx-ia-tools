@@ -26,6 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
     prompts: new workspaceTreeDataProvider("prompts"),
     agents: new workspaceTreeDataProvider("agents"),
     skills: new workspaceTreeDataProvider("skills"),
+    context: new workspaceTreeDataProvider("context"),
     notes: new workspaceTreeDataProvider("notes"),
     tokenCounterProvider: new TokenCounterTreeDataProvider(),
   };
@@ -47,6 +48,10 @@ export function activate(context: vscode.ExtensionContext) {
     "fhizxAiTools.skills",
     providers.skills,
   );
+  vscode.window.registerTreeDataProvider(
+    "fhizxAiTools.context",
+    providers.context,
+  );
   vscode.window.registerTreeDataProvider("fhizxAiTools.notes", providers.notes);
   vscode.window.registerTreeDataProvider(
     "fhizxAiTools.tokenCounter",
@@ -62,6 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
     providers.prompts.refresh();
     providers.agents.refresh();
     providers.skills.refresh();
+    providers.context.refresh();
     providers.notes.refresh();
   };
 

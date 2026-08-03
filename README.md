@@ -1,6 +1,6 @@
 # FhizxAITools: Manager de Herramientas de IA 🤖✨
 
-**Fhixx AI Tools Manager** es una extensión para Visual Studio Code diseñada para centralizar, organizar y gestionar tu ecosistema de herramientas de Inteligencia Artificial directamente desde el editor. Permite administrar prompts, agentes, habilidades (skills) y notas en un espacio global personalizado.
+**Fhixx AI Tools Manager** es una extensión para Visual Studio Code diseñada para centralizar, organizar y gestionar tu ecosistema de herramientas de Inteligencia Artificial directamente desde el editor. Permite administrar prompts, agentes, habilidades (skills), contextos (context) y notas en un espacio global personalizado.
 
 ## 🚀 Características Principales
 
@@ -8,10 +8,11 @@
   - 📝 **Prompts**: Crea y organiza tus instrucciones personalizadas con estructuras específicas de variables y contenido.
   - 🤖 **Agents**: Gestiona los agentes de IA que utilizas habitualmente, definiendo sus roles e instrucciones detalladas.
   - 🛠️ **Skills**: Organiza habilidades específicas por dominio o tarea para flujos de trabajo complejos.
+  - 🧠 **Context**: Gestiona archivos de contexto reutilizables para enriquecer las respuestas de tus asistentes de IA.
   - 📓 **Notes**: Mantén notas relevantes y rápidas para tu flujo de trabajo con IA en un solo lugar centralizado.
 
 - **Interfaz Intuitiva & Automatizada**: Incluye comandos rápidos, botones de navegación y automatizaciones inteligentes:
-  - **Plantillas (Boilerplates)**: Generación automática de estructuras recomendadas al crear nuevos recursos según su categoría.
+  - **Plantillas (Boilerplates)**: Generación automática de estructuras recomendadas, `c-` al crear nuevos recursos según su categoría.
   - **Convenciones de Nombres**: Aplicación automática de prefijos (`p-`, `a-`, `s-`) para mantener un orden consistente en tu espacio global.
   - **Navegación Rápida**: Menú contextual completo y navegación visual directa desde el explorador lateral.
 
@@ -29,8 +30,8 @@
 ## 📖 Guía de Uso
 
 ### Navegación y Creación
-En el panel lateral, podrás ver las secciones correspondientes a Prompts, Agents, Skills y Notes. Utiliza los botones en la barra superior o el menú contextual para:
-- **Crear Archivo**: Añade una nueva entrada usando plantillas predefinidas según el tipo de recurso seleccionado (Prompt, Agent, Skill o Nota).
+En el panel lateral, podrás ver las secciones correspondientes a Prompts, Agents, Skills, Context y Notes. Utiliza los botones en la barra superior o el menú contextual para:
+- **Crear Archivo**: Añade una nueva entrada usando plantillas predefinidas según el tipo de recurso seleccionado (Prompt, Agent, Skill, Context o Nota).
 - **Crear Carpeta**: Organiza tus recursos por categorías, proyectos específicos u otros niveles jerárquicos.
 
 ### Acciones Rápidas

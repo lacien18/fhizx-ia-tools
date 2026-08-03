@@ -3,7 +3,12 @@ import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
 import { FileManagerService } from "../services/fileManagerService";
-import { CATEGORIES, COMMANDS, CONFIG_NAMESPACE, CONFIG_KEYS } from "../constants";
+import {
+  CATEGORIES,
+  COMMANDS,
+  CONFIG_NAMESPACE,
+  CONFIG_KEYS,
+} from "../constants";
 
 export function registerCommands(
   context: vscode.ExtensionContext,
@@ -100,22 +105,25 @@ export function registerCommands(
       }
     }),
 
-    vscode.commands.registerCommand(
-      COMMANDS.OPEN_FILE,
-      (uri: vscode.Uri) => vscode.window.showTextDocument(uri),
+    vscode.commands.registerCommand(COMMANDS.OPEN_FILE, (uri: vscode.Uri) =>
+      vscode.window.showTextDocument(uri),
     ),
 
     // Generadores dinámicos para comandos específicos
-    ...categories.flatMap((cat) => [
-      vscode.commands.registerCommand(
-        `fhizxAiTools.create${cat.charAt(0).toUpperCase() + cat.slice(1, -1)}File`,
-        () => fileManager.createNewFile(cat, refreshAll),
-      ),
-      vscode.commands.registerCommand(
-        `fhizxAiTools.create${cat.charAt(0).toUpperCase() + cat.slice(1, -1)}Folder`,
-        () => fileManager.createNewFolder(cat, refreshAll),
-      ),
-    ]),
+    ...categories.flatMap((cat) => {
+      const singular = cat.endsWith("s") ? cat.slice(0, -1) : cat;
+      const commandName = singular.charAt(0).toUpperCase() + singular.slice(1);
+      return [
+        vscode.commands.registerCommand(
+          `fhizxAiTools.create${commandName}File`,
+          () => fileManager.createNewFile(cat, refreshAll),
+        ),
+        vscode.commands.registerCommand(
+          `fhizxAiTools.create${commandName}Folder`,
+          () => fileManager.createNewFolder(cat, refreshAll),
+        ),
+      ];
+    }),
 
     vscode.commands.registerCommand(
       "fhizxAiTools.createFileContext",
@@ -186,7 +194,8 @@ export function registerCommands(
       "fhizxAiTools.installItem",
       async (node: WorkspaceItem) => {
         if (node && node.category) {
-          const { InstallationService } = await import("../services/installationService");
+          const { InstallationService } =
+            await import("../services/installationService");
           await InstallationService.installItem(node, node.category);
           refreshAll();
         }
@@ -197,13 +206,13 @@ export function registerCommands(
       "fhizxAiTools.uninstallItem",
       async (node: WorkspaceItem) => {
         if (node && node.category) {
-          const { InstallationService } = await import("../services/installationService");
+          const { InstallationService } =
+            await import("../services/installationService");
           await InstallationService.uninstallItem(node, node.category);
           refreshAll();
         }
       },
     ),
-
 
     vscode.commands.registerCommand("fhizxAiTools.checkForUpdates", () => {
       vscode.window.showInformationMessage(

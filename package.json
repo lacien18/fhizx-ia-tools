@@ -28,11 +28,6 @@
     "views": {
       "fhizx-ai-tools-container": [
         {
-          "id": "fhizxAiTools.info",
-          "name": "ℹ️ Información",
-          "icon": ""
-        },
-        {
           "id": "fhizxAiTools.notes",
           "name": "📓 Notes",
           "icon": ""
@@ -179,12 +174,6 @@
         "command": "fhizxAiTools.uninstallItem",
         "title": "Desinstalar",
         "icon": "$(remove)"
-      }
-    ],
-    "viewsWelcome": [
-      {
-        "view": "fhizxAiTools.info",
-        "contents": "[Refrescar vistas](command:fhizxAiTools.refresh)\n[Seleccionar ruta global](command:fhizxAiTools.setGlobalPath)\n\nInstalar y Desinstalar\n\nLa opción **Instalar** (disponible en el menú `...` de Prompts, Skills, Context y Agents) copia el archivo seleccionado directamente a la ruta global de tu asistente Copilot (`~/.vscode/github-copilot`).\n\nEsto te permite utilizar esos agents, skills y context personalizados desde el chat de copilot en **cualquier espacio de trabajo**.\n\nLa opción **Desinstalar** elimina el archivo de dicha ruta global."
       }
     ],
     "submenus": [

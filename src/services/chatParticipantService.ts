@@ -2,7 +2,12 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { FileManagerService } from "./fileManagerService";
-import { CHAT_PARTICIPANT_ID, CONFIG_NAMESPACE, CONFIG_KEYS, COPILOT_CATEGORIES } from "../constants";
+import {
+  CHAT_PARTICIPANT_ID,
+  CONFIG_NAMESPACE,
+  CONFIG_KEYS,
+  COPILOT_CATEGORIES,
+} from "../constants";
 
 export function registerChatParticipant(
   context: vscode.ExtensionContext,
@@ -49,7 +54,7 @@ export function registerChatParticipant(
       }
 
       response.markdown(
-        "Usa `@fhizx-ai-tools usar <nombre>` para invocar tus prompts, agents o skills.",
+        "Usa `@fhizx-ai-tools usar <nombre>` para invocar tus prompts, agents, skills o context.",
       );
     },
   );

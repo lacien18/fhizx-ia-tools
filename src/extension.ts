@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { workspaceTreeDataProvider } from "./providers/workspaceTreeDataProvider";
 import { TokenCounterTreeDataProvider } from "./providers/tokenCounterProvider";
+import { ConfigurationTreeDataProvider } from "./providers/configurationTreeDataProvider";
 import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
 import { registerCommands } from "./suscriptions/commandSubscriptions";
@@ -11,30 +12,19 @@ import {
   COPILOT_CATEGORIES,
 } from "./constants";
 
-class EmptyTreeDataProvider implements vscode.TreeDataProvider<any> {
-  getTreeItem(element: any): vscode.TreeItem {
-    return element;
-  }
-  getChildren(): Thenable<any[]> {
-    return Promise.resolve([]);
-  }
-}
-
 export function activate(context: vscode.ExtensionContext) {
   // 1. Inicialización de Providers
   const providers = {
     prompts: new workspaceTreeDataProvider("prompts"),
     agents: new workspaceTreeDataProvider("agents"),
     skills: new workspaceTreeDataProvider("skills"),
+    context: new workspaceTreeDataProvider("context"),
     notes: new workspaceTreeDataProvider("notes"),
     tokenCounterProvider: new TokenCounterTreeDataProvider(),
+    configurations: new ConfigurationTreeDataProvider(),
   };
 
   // Registro de DataProviders en la UI de VS Code
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.info",
-    new EmptyTreeDataProvider(),
-  );
   vscode.window.registerTreeDataProvider(
     "fhizxAiTools.prompts",
     providers.prompts,
@@ -47,10 +37,18 @@ export function activate(context: vscode.ExtensionContext) {
     "fhizxAiTools.skills",
     providers.skills,
   );
+  vscode.window.registerTreeDataProvider(
+    "fhizxAiTools.context",
+    providers.context,
+  );
   vscode.window.registerTreeDataProvider("fhizxAiTools.notes", providers.notes);
   vscode.window.registerTreeDataProvider(
     "fhizxAiTools.tokenCounter",
     providers.tokenCounterProvider,
+  );
+  vscode.window.registerTreeDataProvider(
+    "fhizxAiTools.configurations",
+    providers.configurations,
   );
 
   // 2. Servicios de negocio y chat
@@ -62,7 +60,9 @@ export function activate(context: vscode.ExtensionContext) {
     providers.prompts.refresh();
     providers.agents.refresh();
     providers.skills.refresh();
+    providers.context.refresh();
     providers.notes.refresh();
+    providers.configurations.refresh();
   };
 
   // 3. Suscripciones de Comandos

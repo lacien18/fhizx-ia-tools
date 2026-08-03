@@ -11,7 +11,9 @@ export class workspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor(public category: "prompts" | "agents" | "skills" | "notes") {}
+  constructor(
+    public category: "prompts" | "agents" | "skills" | "context" | "notes",
+  ) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();

@@ -4,7 +4,12 @@ import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
 import { FILE_PREFIXES, CATEGORIES } from "../constants";
 
-export type CategoryType = "prompts" | "agents" | "skills" | "notes";
+export type CategoryType =
+  | "prompts"
+  | "agents"
+  | "skills"
+  | "context"
+  | "notes";
 
 export class FileManagerService {
   constructor(
@@ -46,6 +51,8 @@ export class FileManagerService {
         return `# Agent: ${rawName}\n\n## Rol y Propósito\n[Define quién es este agente]\n\n## Instrucciones\n- Regla 1\n`;
       case "skills":
         return `# Skill: ${rawName}\n\n## Objetivo\n[Describe la habilidad]\n\n## Pasos\n1. Paso inicial...\n`;
+      case "context":
+        return `# Context: ${rawName}\n\n## Propósito\n[Describe qué contexto aporta este archivo]\n\n## Información Relevante\n- Dato 1\n`;
       case "notes":
         return `# Nota: ${rawName}\n\n## Resumen\n[Notas rápidas]\n\n---\n\n`;
       default:

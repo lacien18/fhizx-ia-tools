@@ -1,11 +1,23 @@
-export const CATEGORIES = ["prompts", "agents", "skills", "notes"] as const;
+export const CATEGORIES = [
+  "prompts",
+  "agents",
+  "skills",
+  "context",
+  "notes",
+] as const;
 
-export const COPILOT_CATEGORIES = ["prompts", "agents", "skills"] as const;
+export const COPILOT_CATEGORIES = [
+  "prompts",
+  "agents",
+  "skills",
+  "context",
+] as const;
 
 export const FILE_PREFIXES = {
   prompts: "p-",
   agents: "a-",
   skills: "s-",
+  context: "c-",
 } as const;
 
 export const CONFIG_NAMESPACE = "fhizxAiTools";
@@ -20,6 +32,8 @@ export const COMMANDS = {
   SET_GLOBAL_PATH: "fhizxAiTools.setGlobalPath",
   REFRESH: "fhizxAiTools.refresh",
   SEND_TO_CHAT: "fhizxAiTools.sendToChat",
+  TOGGLE_INSTALL: "fhizxAiTools.toggleInstall",
+  OPEN_GLOBAL_PATH: "fhizxAiTools.openGlobalPath",
 } as const;
 
 export const MODEL_PRICES = {

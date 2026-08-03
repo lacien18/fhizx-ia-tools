@@ -1,8 +1,8 @@
 {
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
-  "description": "Gestiona prompts, agents, skills y notas para herramientas de IA",
-  "version": "1.3.1",
+  "description": "Gestiona prompts, agents, skills, context y notas para herramientas de IA",
+  "version": "1.4.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -28,8 +28,8 @@
     "views": {
       "fhizx-ai-tools-container": [
         {
-          "id": "fhizxAiTools.info",
-          "name": "ℹ️ Información",
+          "id": "fhizxAiTools.configurations",
+          "name": "⚙️ Configurations",
           "icon": ""
         },
         {
@@ -50,6 +50,11 @@
         {
           "id": "fhizxAiTools.skills",
           "name": "🚀 Skills",
+          "icon": ""
+        },
+        {
+          "id": "fhizxAiTools.context",
+          "name": "🧠 Context",
           "icon": ""
         },
         {
@@ -118,6 +123,16 @@
         "icon": "$(new-folder)"
       },
       {
+        "command": "fhizxAiTools.createContextFile",
+        "title": "Crear Archivo",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "fhizxAiTools.createContextFolder",
+        "title": "Crear Carpeta",
+        "icon": "$(new-folder)"
+      },
+      {
         "command": "fhizxAiTools.createNoteFile",
         "title": "Crear Archivo",
         "icon": "$(file-add)"
@@ -164,12 +179,16 @@
         "command": "fhizxAiTools.uninstallItem",
         "title": "Desinstalar",
         "icon": "$(remove)"
-      }
-    ],
-    "viewsWelcome": [
+      },
       {
-        "view": "fhizxAiTools.info",
-        "contents": "[Refrescar vistas](command:fhizxAiTools.refresh)\n[Seleccionar ruta global](command:fhizxAiTools.setGlobalPath)\n\nInstalar y Desinstalar\n\nLa opción **Instalar** (disponible en el menú `...` de Prompts, Skills y Agents) copia el archivo seleccionado directamente a la ruta global de tu asistente Copilot (`~/.vscode/github-copilot`).\n\nEsto te permite utilizar esos agentes y skills personalizados desde el chat de copilot en **cualquier espacio de trabajo**.\n\nLa opción **Desinstalar** elimina el archivo de dicha ruta global."
+        "command": "fhizxAiTools.toggleInstall",
+        "title": "Instalar / Desinstalar en Copilot",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "fhizxAiTools.openGlobalPath",
+        "title": "Abrir Ruta Global",
+        "icon": "$(folder-opened)"
       }
     ],
     "submenus": [
@@ -181,6 +200,16 @@
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "fhizxAiTools.refresh",
+          "when": "view == fhizxAiTools.configurations",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fhizxAiTools.setGlobalPath",
+          "when": "view == fhizxAiTools.configurations",
+          "group": "navigation@2"
+        },
         {
           "command": "fhizxAiTools.refresh",
           "when": "view == fhizxAiTools.notes",
@@ -212,6 +241,16 @@
           "group": "navigation@2"
         },
         {
+          "command": "fhizxAiTools.createContextFile",
+          "when": "view == fhizxAiTools.context",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fhizxAiTools.createContextFolder",
+          "when": "view == fhizxAiTools.context",
+          "group": "navigation@2"
+        },
+        {
           "command": "fhizxAiTools.createSkillFile",
           "when": "view == fhizxAiTools.skills",
           "group": "navigation@1"
@@ -233,6 +272,16 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "fhizxAiTools.openGlobalPath",
+          "when": "viewItem == config_status && view == fhizxAiTools.configurations",
+          "group": "inline"
+        },
+        {
+          "command": "fhizxAiTools.toggleInstall",
+          "when": "viewItem == config_action && view == fhizxAiTools.configurations",
+          "group": "inline"
+        },
         {
           "submenu": "fhizxAiTools.itemMenu",
           "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",
@@ -293,7 +342,7 @@
         "fhizxAiTools.globalPath": {
           "type": "string",
           "default": "",
-          "description": "Ruta global donde se almacenarán los prompts, agents, skills y notas."
+          "description": "Ruta global donde se almacenarán los prompts, agents, skills, context y notas."
         }
       }
     }

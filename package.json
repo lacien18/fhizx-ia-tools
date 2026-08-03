@@ -211,16 +211,6 @@
           "group": "navigation@2"
         },
         {
-          "command": "fhizxAiTools.refresh",
-          "when": "view == fhizxAiTools.notes",
-          "group": "navigation@1"
-        },
-        {
-          "command": "fhizxAiTools.setGlobalPath",
-          "when": "view == fhizxAiTools.notes",
-          "group": "navigation@2"
-        },
-        {
           "command": "fhizxAiTools.createPromptFile",
           "when": "view == fhizxAiTools.prompts",
           "group": "navigation@2"

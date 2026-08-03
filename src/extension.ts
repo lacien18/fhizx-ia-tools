@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { workspaceTreeDataProvider } from "./providers/workspaceTreeDataProvider";
 import { TokenCounterTreeDataProvider } from "./providers/tokenCounterProvider";
+import { ConfigurationTreeDataProvider } from "./providers/configurationTreeDataProvider";
 import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
 import { registerCommands } from "./suscriptions/commandSubscriptions";
@@ -20,6 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
     context: new workspaceTreeDataProvider("context"),
     notes: new workspaceTreeDataProvider("notes"),
     tokenCounterProvider: new TokenCounterTreeDataProvider(),
+    configurations: new ConfigurationTreeDataProvider(),
   };
 
   // Registro de DataProviders en la UI de VS Code
@@ -44,6 +46,10 @@ export function activate(context: vscode.ExtensionContext) {
     "fhizxAiTools.tokenCounter",
     providers.tokenCounterProvider,
   );
+  vscode.window.registerTreeDataProvider(
+    "fhizxAiTools.configurations",
+    providers.configurations,
+  );
 
   // 2. Servicios de negocio y chat
   const fileManager = new FileManagerService(providers);
@@ -56,6 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
     providers.skills.refresh();
     providers.context.refresh();
     providers.notes.refresh();
+    providers.configurations.refresh();
   };
 
   // 3. Suscripciones de Comandos

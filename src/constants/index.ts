@@ -32,6 +32,8 @@ export const COMMANDS = {
   SET_GLOBAL_PATH: "fhizxAiTools.setGlobalPath",
   REFRESH: "fhizxAiTools.refresh",
   SEND_TO_CHAT: "fhizxAiTools.sendToChat",
+  TOGGLE_INSTALL: "fhizxAiTools.toggleInstall",
+  OPEN_GLOBAL_PATH: "fhizxAiTools.openGlobalPath",
 } as const;
 
 export const MODEL_PRICES = {

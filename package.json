@@ -28,6 +28,11 @@
     "views": {
       "fhizx-ai-tools-container": [
         {
+          "id": "fhizxAiTools.configurations",
+          "name": "⚙️ Configurations",
+          "icon": ""
+        },
+        {
           "id": "fhizxAiTools.notes",
           "name": "📓 Notes",
           "icon": ""
@@ -174,6 +179,16 @@
         "command": "fhizxAiTools.uninstallItem",
         "title": "Desinstalar",
         "icon": "$(remove)"
+      },
+      {
+        "command": "fhizxAiTools.toggleInstall",
+        "title": "Instalar / Desinstalar en Copilot",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "fhizxAiTools.openGlobalPath",
+        "title": "Abrir Ruta Global",
+        "icon": "$(folder-opened)"
       }
     ],
     "submenus": [
@@ -185,6 +200,16 @@
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "fhizxAiTools.refresh",
+          "when": "view == fhizxAiTools.configurations",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fhizxAiTools.setGlobalPath",
+          "when": "view == fhizxAiTools.configurations",
+          "group": "navigation@2"
+        },
         {
           "command": "fhizxAiTools.refresh",
           "when": "view == fhizxAiTools.notes",
@@ -247,6 +272,16 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "fhizxAiTools.openGlobalPath",
+          "when": "viewItem == config_status && view == fhizxAiTools.configurations",
+          "group": "inline"
+        },
+        {
+          "command": "fhizxAiTools.toggleInstall",
+          "when": "viewItem == config_action && view == fhizxAiTools.configurations",
+          "group": "inline"
+        },
         {
           "submenu": "fhizxAiTools.itemMenu",
           "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",

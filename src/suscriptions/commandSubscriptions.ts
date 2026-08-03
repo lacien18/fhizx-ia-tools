@@ -6,8 +6,10 @@ import { FileManagerService } from "../services/fileManagerService";
 import {
   CATEGORIES,
   COMMANDS,
+  COMMAND_PREFIX,
   CONFIG_NAMESPACE,
   CONFIG_KEYS,
+  capitalizeCategory,
 } from "../constants";
 
 export function registerCommands(
@@ -38,14 +40,14 @@ export function registerCommands(
         const fileName = path.basename(filePath);
 
         try {
-          await vscode.commands.executeCommand("workbench.action.chat.open", {
+          await vscode.commands.executeCommand(COMMANDS.WORKBENCH_CHAT_OPEN, {
             query: `Usa el siguiente recurso (${fileName}):\n\n${content}`,
             isPartialQuery: true,
           });
         } catch {
           // Fallback if chat doesn't support query or something goes wrong
           await vscode.env.clipboard.writeText(content);
-          vscode.commands.executeCommand("workbench.action.chat.open");
+          vscode.commands.executeCommand(COMMANDS.WORKBENCH_CHAT_OPEN);
           vscode.window.showInformationMessage(
             `El contenido de "${fileName}" se copió al portapapeles.`,
           );
@@ -54,7 +56,7 @@ export function registerCommands(
     ),
 
     vscode.commands.registerCommand(
-      "fhizxAiTools.copyToClipboard",
+      COMMANDS.COPY_TO_CLIPBOARD,
       async (node?: WorkspaceItem | vscode.Uri) => {
         let filePath = "";
         if (node && "resourceUri" in node) filePath = node.resourceUri.fsPath;
@@ -111,33 +113,32 @@ export function registerCommands(
 
     // Generadores dinámicos para comandos específicos
     ...categories.flatMap((cat) => {
-      const singular = cat.endsWith("s") ? cat.slice(0, -1) : cat;
-      const commandName = singular.charAt(0).toUpperCase() + singular.slice(1);
+      const commandName = capitalizeCategory(cat);
       return [
         vscode.commands.registerCommand(
-          `fhizxAiTools.create${commandName}File`,
+          `${COMMAND_PREFIX.CREATE}${commandName}${COMMAND_PREFIX.SUFFIX_FILE}`,
           () => fileManager.createNewFile(cat, refreshAll),
         ),
         vscode.commands.registerCommand(
-          `fhizxAiTools.create${commandName}Folder`,
+          `${COMMAND_PREFIX.CREATE}${commandName}${COMMAND_PREFIX.SUFFIX_FOLDER}`,
           () => fileManager.createNewFolder(cat, refreshAll),
         ),
       ];
     }),
 
     vscode.commands.registerCommand(
-      "fhizxAiTools.createFileContext",
+      COMMANDS.CREATE_FILE_CONTEXT,
       (node: WorkspaceItem) =>
         fileManager.createNewFile("prompts", refreshAll, node),
     ),
     vscode.commands.registerCommand(
-      "fhizxAiTools.createFolderContext",
+      COMMANDS.CREATE_FOLDER_CONTEXT,
       (node: WorkspaceItem) =>
         fileManager.createNewFolder("prompts", refreshAll, node),
     ),
 
     vscode.commands.registerCommand(
-      "fhizxAiTools.renameItem",
+      COMMANDS.RENAME_ITEM,
       async (node: WorkspaceItem) => {
         if (!node) return;
         const oldPath = node.resourceUri.fsPath;
@@ -169,7 +170,7 @@ export function registerCommands(
     ),
 
     vscode.commands.registerCommand(
-      "fhizxAiTools.deleteItem",
+      COMMANDS.DELETE_ITEM,
       async (node: WorkspaceItem) => {
         if (!node) return;
         const confirm = await vscode.window.showWarningMessage(
@@ -191,7 +192,7 @@ export function registerCommands(
     ),
 
     vscode.commands.registerCommand(
-      "fhizxAiTools.installItem",
+      COMMANDS.INSTALL_ITEM,
       async (node: WorkspaceItem) => {
         if (node && node.category) {
           const { InstallationService } =
@@ -203,7 +204,7 @@ export function registerCommands(
     ),
 
     vscode.commands.registerCommand(
-      "fhizxAiTools.uninstallItem",
+      COMMANDS.UNINSTALL_ITEM,
       async (node: WorkspaceItem) => {
         if (node && node.category) {
           const { InstallationService } =
@@ -214,7 +215,7 @@ export function registerCommands(
       },
     ),
 
-    vscode.commands.registerCommand("fhizxAiTools.checkForUpdates", () => {
+    vscode.commands.registerCommand(COMMANDS.CHECK_FOR_UPDATES, () => {
       vscode.window.showInformationMessage(
         "FhizxAITools se encuentra actualizado.",
       );

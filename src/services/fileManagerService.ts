@@ -2,14 +2,12 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
-import { FILE_PREFIXES, CATEGORIES } from "../constants";
-
-export type CategoryType =
-  | "prompts"
-  | "agents"
-  | "skills"
-  | "context"
-  | "notes";
+import {
+  FILE_PREFIXES,
+  FILE_EXTENSIONS,
+  CATEGORIES,
+  type CategoryType,
+} from "../constants";
 
 export class FileManagerService {
   constructor(
@@ -35,7 +33,8 @@ export class FileManagerService {
       } else if (
         entry.isFile() &&
         (entry.name === name ||
-          entry.name.replace(/\.prompt\.md$/, "") === name)
+          (entry.name.endsWith(FILE_EXTENSIONS.PROMPT_MD) &&
+            entry.name.slice(0, -FILE_EXTENSIONS.PROMPT_MD.length) === name))
       ) {
         return fullPath;
       }
@@ -90,7 +89,9 @@ export class FileManagerService {
     if (!name) return;
 
     const isNote = category === "notes";
-    const extension = isNote ? ".md" : ".prompt.md";
+    const extension = isNote
+      ? FILE_EXTENSIONS.MARKDOWN
+      : FILE_EXTENSIONS.PROMPT_MD;
 
     let cleanName = name.trim();
     if (cleanName.endsWith(extension))

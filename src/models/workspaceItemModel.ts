@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { COMMANDS } from "../constants";
+import { COMMANDS, ICONS } from "../constants";
 
 export class WorkspaceItem extends vscode.TreeItem {
   constructor(
@@ -21,12 +21,12 @@ export class WorkspaceItem extends vscode.TreeItem {
         // Configurar iconos para mostrar el estado de instalación (verde si instalado, rojo si no)
         if (isInstalled) {
           this.iconPath = new vscode.ThemeIcon(
-            "testing-passed-icon",
+            ICONS.PASSED,
             new vscode.ThemeColor("testing.iconPassed"),
           );
         } else {
           this.iconPath = new vscode.ThemeIcon(
-            "notebook-state-error",
+            ICONS.ERROR,
             new vscode.ThemeColor("testing.iconFailed"),
           );
         }

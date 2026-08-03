@@ -10,6 +10,8 @@ import {
   CONFIG_KEYS,
   COMMANDS,
   COPILOT_CATEGORIES,
+  COPILOT_BASE_DIR,
+  VIEW_IDS,
 } from "./constants";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -25,29 +27,17 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   // Registro de DataProviders en la UI de VS Code
+  vscode.window.registerTreeDataProvider(VIEW_IDS.PROMPTS, providers.prompts);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.AGENTS, providers.agents);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.SKILLS, providers.skills);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.CONTEXT, providers.context);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.NOTES, providers.notes);
   vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.prompts",
-    providers.prompts,
-  );
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.agents",
-    providers.agents,
-  );
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.skills",
-    providers.skills,
-  );
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.context",
-    providers.context,
-  );
-  vscode.window.registerTreeDataProvider("fhizxAiTools.notes", providers.notes);
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.tokenCounter",
+    VIEW_IDS.TOKEN_COUNTER,
     providers.tokenCounterProvider,
   );
   vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.configurations",
+    VIEW_IDS.CONFIGURATIONS,
     providers.configurations,
   );
 
@@ -91,11 +81,10 @@ export function deactivate() {}
 
 async function ensureCopilotPromptConfig() {
   try {
-    const os = await import("os");
     const path = await import("path");
     const fs = await import("fs");
 
-    const copilotBase = path.join(os.homedir(), ".vscode", "github-copilot");
+    const copilotBase = COPILOT_BASE_DIR;
     const categories = COPILOT_CATEGORIES;
     const config = vscode.workspace.getConfiguration();
 

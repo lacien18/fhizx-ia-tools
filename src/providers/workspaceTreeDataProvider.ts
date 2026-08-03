@@ -3,7 +3,12 @@ import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
 import { InstallationService } from "../services/installationService";
-import { CONFIG_NAMESPACE, CONFIG_KEYS } from "../constants";
+import {
+  CONFIG_NAMESPACE,
+  CONFIG_KEYS,
+  FILE_EXTENSIONS,
+  type CategoryType,
+} from "../constants";
 
 export class workspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -11,9 +16,7 @@ export class workspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor(
-    public category: "prompts" | "agents" | "skills" | "context" | "notes",
-  ) {}
+  constructor(public category: CategoryType) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -81,9 +84,12 @@ export class workspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
 
   private validateExtension(fileName: string): boolean {
     if (this.category === "notes") {
-      return fileName.endsWith(".md") && !fileName.endsWith(".prompt.md");
+      return (
+        fileName.endsWith(FILE_EXTENSIONS.MARKDOWN) &&
+        !fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)
+      );
     }
-    return fileName.endsWith(".prompt.md");
+    return fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD);
   }
 
   public getGlobalCategoryPath(): string | undefined {

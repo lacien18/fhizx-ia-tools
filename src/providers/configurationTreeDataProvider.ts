@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { ConfigurationItem } from "../models/configurationItemModel";
-import { COMMANDS, CONFIG_NAMESPACE, CONFIG_KEYS } from "../constants";
+import { COMMANDS, CONFIG_NAMESPACE, CONFIG_KEYS, ICONS } from "../constants";
 
 export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<ConfigurationItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -72,7 +72,7 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
         isConfigured
           ? `${globalPath}`
           : "Configura una ruta global para empezar a gestionar tus recursos.",
-        isConfigured ? "testing-passed-icon" : "notebook-state-error",
+        isConfigured ? ICONS.PASSED : ICONS.ERROR,
         "info",
       ),
     );

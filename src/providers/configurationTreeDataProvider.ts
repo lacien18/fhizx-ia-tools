@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { ConfigurationItem } from "../models/configurationItemModel";
-import { COMMANDS, CONFIG_NAMESPACE, CONFIG_KEYS } from "../constants";
+import { COMMANDS, CONFIG_NAMESPACE, CONFIG_KEYS, ICONS } from "../constants";
 
 export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<ConfigurationItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -47,10 +47,20 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
         "🔄 Recargar",
         "- Actualiza todas las vistas (prompts, agents, skills, context, notes y configuración).",
         "",
-        "action",
+        "info",
         {
           command: COMMANDS.REFRESH,
           title: "Recargar",
+        },
+      ),
+      new ConfigurationItem(
+        "📦 Instalar / Desinstalar en Copilot",
+        "- Alterna la instalación de un recurso en Copilot.",
+        "",
+        "info",
+        {
+          command: COMMANDS.TOGGLE_INSTALL,
+          title: "Instalar / Desinstalar en Copilot",
         },
       ),
       new ConfigurationItem(
@@ -72,8 +82,8 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
         isConfigured
           ? `${globalPath}`
           : "Configura una ruta global para empezar a gestionar tus recursos.",
-        isConfigured ? "testing-passed-icon" : "notebook-state-error",
-        "info",
+        isConfigured ? ICONS.PASSED : ICONS.ERROR,
+        "status",
       ),
     );
 

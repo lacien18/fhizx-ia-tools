@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { getEncoding } from "js-tiktoken";
 import { TokenStatItem } from "../models/tokenStatItemModel";
-import { ENCODING_NAME, MODEL_PRICES } from "../constants";
+import { ENCODING_NAME, MODEL_PRICES, TOKENS_PER_MILLION } from "../constants";
 
 const encoder = getEncoding(ENCODING_NAME);
 
@@ -59,10 +59,13 @@ export class TokenCounterTreeDataProvider implements vscode.TreeDataProvider<Tok
       exactTokens = Math.ceil(charCount / 4);
     }
 
-    const costGPT4o = (exactTokens / 1_000_000) * MODEL_PRICES.GPT_4O;
-    const costMini = (exactTokens / 1_000_000) * MODEL_PRICES.GPT_4O_MINI;
-    const costSonnet = (exactTokens / 1_000_000) * MODEL_PRICES.CLAUDE_SONNET;
-    const costGemini = (exactTokens / 1_000_000) * MODEL_PRICES.GEMINI_FLASH;
+    const costGPT4o = (exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O;
+    const costMini =
+      (exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O_MINI;
+    const costSonnet =
+      (exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.CLAUDE_SONNET;
+    const costGemini =
+      (exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GEMINI_FLASH;
 
     return [
       new TokenStatItem("📁 Archivo:", fileName, ""),

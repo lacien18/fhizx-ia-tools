@@ -1,53 +1,47 @@
 import * as vscode from "vscode";
-import { workspaceTreeDataProvider } from "./providers/workspaceTreeDataProvider";
+import { WorkspaceTreeDataProvider } from "./providers/workspaceTreeDataProvider";
 import { TokenCounterTreeDataProvider } from "./providers/tokenCounterProvider";
 import { ConfigurationTreeDataProvider } from "./providers/configurationTreeDataProvider";
 import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
-import { registerCommands } from "./suscriptions/commandSubscriptions";
+import { registerCommands } from "./subscriptions/commandSubscriptions";
 import {
   CONFIG_NAMESPACE,
   CONFIG_KEYS,
   COMMANDS,
   COPILOT_CATEGORIES,
+  COPILOT_BASE_DIR,
+  VIEW_IDS,
 } from "./constants";
+import {
+  ensureGlobalStructure,
+  getGlobalPathConfig,
+} from "./utils/resourceUtils";
 
 export function activate(context: vscode.ExtensionContext) {
   // 1. Inicialización de Providers
   const providers = {
-    prompts: new workspaceTreeDataProvider("prompts"),
-    agents: new workspaceTreeDataProvider("agents"),
-    skills: new workspaceTreeDataProvider("skills"),
-    context: new workspaceTreeDataProvider("context"),
-    notes: new workspaceTreeDataProvider("notes"),
+    prompts: new WorkspaceTreeDataProvider("prompts"),
+    agents: new WorkspaceTreeDataProvider("agents"),
+    skills: new WorkspaceTreeDataProvider("skills"),
+    context: new WorkspaceTreeDataProvider("context"),
+    notes: new WorkspaceTreeDataProvider("notes"),
     tokenCounterProvider: new TokenCounterTreeDataProvider(),
     configurations: new ConfigurationTreeDataProvider(),
   };
 
   // Registro de DataProviders en la UI de VS Code
+  vscode.window.registerTreeDataProvider(VIEW_IDS.PROMPTS, providers.prompts);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.AGENTS, providers.agents);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.SKILLS, providers.skills);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.CONTEXT, providers.context);
+  vscode.window.registerTreeDataProvider(VIEW_IDS.NOTES, providers.notes);
   vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.prompts",
-    providers.prompts,
-  );
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.agents",
-    providers.agents,
-  );
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.skills",
-    providers.skills,
-  );
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.context",
-    providers.context,
-  );
-  vscode.window.registerTreeDataProvider("fhizxAiTools.notes", providers.notes);
-  vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.tokenCounter",
+    VIEW_IDS.TOKEN_COUNTER,
     providers.tokenCounterProvider,
   );
   vscode.window.registerTreeDataProvider(
-    "fhizxAiTools.configurations",
+    VIEW_IDS.CONFIGURATIONS,
     providers.configurations,
   );
 
@@ -68,9 +62,25 @@ export function activate(context: vscode.ExtensionContext) {
   // 3. Suscripciones de Comandos
   registerCommands(context, fileManager, refreshAll);
 
+  // Comando de listado (usado por el chat participant `listar`)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(COMMANDS.LIST, () => {
+      const globalPath = getGlobalPathConfig();
+      if (!globalPath) {
+        vscode.window.showWarningMessage(
+          "Configura la ruta global para listar tus recursos.",
+        );
+        return;
+      }
+      void vscode.commands.executeCommand(COMMANDS.WORKBENCH_CHAT_OPEN, {
+        query: "@fhizx-ai-tools listar",
+        isPartialQuery: true,
+      });
+    }),
+  );
+
   // 4. Verificación inicial de configuración global
-  const config = vscode.workspace.getConfiguration(CONFIG_NAMESPACE);
-  if (!config.get<string>(CONFIG_KEYS.GLOBAL_PATH)) {
+  if (!getGlobalPathConfig()) {
     vscode.window
       .showInformationMessage(
         "Bienvenido a FhizxAITools. Selecciona tu ruta de almacenamiento global.",
@@ -81,7 +91,19 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.commands.executeCommand(COMMANDS.SET_GLOBAL_PATH);
         }
       });
+  } else {
+    // Asegura la estructura de carpetas si la ruta global ya existía
+    const globalPath = getGlobalPathConfig()!;
+    if (globalPath) ensureGlobalStructure(globalPath);
   }
+
+  // Al cambiar la ruta global, recrear la estructura de carpetas
+  vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration(CONFIG_NAMESPACE)) {
+      const globalPath = getGlobalPathConfig();
+      if (globalPath) ensureGlobalStructure(globalPath);
+    }
+  });
 
   // 5. Registrar rutas de prompt files en Copilot al activarse
   ensureCopilotPromptConfig();
@@ -91,11 +113,10 @@ export function deactivate() {}
 
 async function ensureCopilotPromptConfig() {
   try {
-    const os = await import("os");
     const path = await import("path");
     const fs = await import("fs");
 
-    const copilotBase = path.join(os.homedir(), ".vscode", "github-copilot");
+    const copilotBase = COPILOT_BASE_DIR;
     const categories = COPILOT_CATEGORIES;
     const config = vscode.workspace.getConfiguration();
 

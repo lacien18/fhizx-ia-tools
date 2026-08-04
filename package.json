@@ -2,7 +2,7 @@
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
   "description": "Gestiona prompts, agents, skills, context y notas para herramientas de IA",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -171,6 +171,11 @@
         "title": "FhizxAITools: Buscar Actualizaciones"
       },
       {
+        "command": "fhizxAiTools.list",
+        "title": "FhizxAITools: Listar Recursos",
+        "icon": "$(list-flat)"
+      },
+      {
         "command": "fhizxAiTools.installItem",
         "title": "Instalar",
         "icon": "$(add)"
@@ -183,7 +188,7 @@
       {
         "command": "fhizxAiTools.toggleInstall",
         "title": "Instalar / Desinstalar en Copilot",
-        "icon": "$(sync)"
+        "icon": "$(find-selection)"
       },
       {
         "command": "fhizxAiTools.openGlobalPath",
@@ -208,16 +213,6 @@
         {
           "command": "fhizxAiTools.setGlobalPath",
           "when": "view == fhizxAiTools.configurations",
-          "group": "navigation@2"
-        },
-        {
-          "command": "fhizxAiTools.refresh",
-          "when": "view == fhizxAiTools.notes",
-          "group": "navigation@1"
-        },
-        {
-          "command": "fhizxAiTools.setGlobalPath",
-          "when": "view == fhizxAiTools.notes",
           "group": "navigation@2"
         },
         {
@@ -350,12 +345,14 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^18.x",
     "@types/vscode": "^1.85.0",
-    "typescript": "^5.x"
+    "typescript": "^5.x",
+    "vitest": "^2.1.9"
   },
   "dependencies": {
     "js-tiktoken": "^1.0.12"

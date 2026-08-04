@@ -2,26 +2,35 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
-import { FILE_PREFIXES, CATEGORIES } from "../constants";
+import { WorkspaceTreeDataProvider } from "../providers/workspaceTreeDataProvider";
+import {
+  FILE_PREFIXES,
+  FILE_EXTENSIONS,
+  CATEGORIES,
+  type CategoryType,
+} from "../constants";
+import { isDirectory, safeReadFile, toPromptFileName } from "../utils/fsUtils";
+import { getGlobalPathConfig, notifyFsError } from "../utils/resourceUtils";
 
-export type CategoryType =
-  | "prompts"
-  | "agents"
-  | "skills"
-  | "context"
-  | "notes";
+/**
+ * Providers de categoría expuestos al FileManagerService.
+ * Contrato mínimo para resolver la ruta de cada categoría.
+ */
+export interface CategoryProvider {
+  getGlobalCategoryPath(): string | undefined;
+}
+
+export type FileManagerProviders = Record<CategoryType, CategoryProvider>;
 
 export class FileManagerService {
-  constructor(
-    private providers: Record<CategoryType | "tokenCounterProvider", any>,
-  ) {}
+  constructor(private providers: FileManagerProviders) {}
 
-  getCategoryFromPath(targetPath: string): CategoryType {
+  getCategoryFromPath(targetPath: string): CategoryType | undefined {
     for (const key of CATEGORIES) {
       const catPath = this.providers[key].getGlobalCategoryPath();
       if (catPath && targetPath.startsWith(catPath)) return key;
     }
-    return "prompts";
+    return undefined;
   }
 
   findFileRecursive(dir: string, name: string): string | null {
@@ -35,7 +44,8 @@ export class FileManagerService {
       } else if (
         entry.isFile() &&
         (entry.name === name ||
-          entry.name.replace(/\.prompt\.md$/, "") === name)
+          (entry.name.endsWith(FILE_EXTENSIONS.PROMPT_MD) &&
+            entry.name.slice(0, -FILE_EXTENSIONS.PROMPT_MD.length) === name))
       ) {
         return fullPath;
       }
@@ -65,53 +75,56 @@ export class FileManagerService {
     refreshAll: () => void,
     targetNode?: WorkspaceItem,
   ) {
-    let basePath = "";
-    if (targetNode) {
-      const stat = fs.statSync(targetNode.resourceUri.fsPath);
-      basePath = stat.isDirectory()
-        ? targetNode.resourceUri.fsPath
-        : path.dirname(targetNode.resourceUri.fsPath);
-      category = this.getCategoryFromPath(basePath);
-    } else {
-      basePath = this.providers[category].getGlobalCategoryPath() || "";
-    }
+    try {
+      let basePath = "";
+      if (targetNode) {
+        basePath = isDirectory(targetNode.resourceUri.fsPath)
+          ? targetNode.resourceUri.fsPath
+          : path.dirname(targetNode.resourceUri.fsPath);
+        category = this.getCategoryFromPath(basePath) ?? category;
+      } else {
+        basePath = this.providers[category].getGlobalCategoryPath() || "";
+      }
 
-    if (!basePath) {
-      vscode.window.showWarningMessage(
-        "Configura la ruta global haciendo clic en el icono de configuración.",
+      if (!basePath) {
+        vscode.window.showWarningMessage(
+          "Configura la ruta global haciendo clic en el icono de configuración.",
+        );
+        return;
+      }
+
+      const name = await vscode.window.showInputBox({
+        prompt: `Nombre del archivo para ${category}`,
+        placeHolder: "ej. mi-archivo",
+      });
+      if (!name) return;
+
+      const isNote = category === "notes";
+      const extension = isNote
+        ? FILE_EXTENSIONS.MARKDOWN
+        : FILE_EXTENSIONS.PROMPT_MD;
+
+      let cleanName = name.trim();
+      if (cleanName.endsWith(extension))
+        cleanName = cleanName.slice(0, -extension.length);
+
+      const prefixForfile = FILE_PREFIXES[category] || "";
+
+      const filePath = path.join(
+        basePath,
+        `${prefixForfile}${cleanName}${extension}`,
       );
-      return;
+      if (fs.existsSync(filePath)) {
+        vscode.window.showErrorMessage("El archivo ya existe.");
+        return;
+      }
+
+      fs.writeFileSync(filePath, this.getBoilerplateContent(category, name));
+      refreshAll();
+      vscode.window.showTextDocument(vscode.Uri.file(filePath));
+    } catch (error) {
+      notifyFsError("No se pudo crear el archivo", error);
     }
-
-    const name = await vscode.window.showInputBox({
-      prompt: `Nombre del archivo para ${category}`,
-      placeHolder: "ej. mi-archivo",
-    });
-    if (!name) return;
-
-    const isNote = category === "notes";
-    const extension = isNote ? ".md" : ".prompt.md";
-
-    let cleanName = name.trim();
-    if (cleanName.endsWith(extension))
-      cleanName = cleanName.slice(0, -extension.length);
-
-    const dataPrefix = new Map<string, string>(Object.entries(FILE_PREFIXES));
-
-    const prefixForfile = dataPrefix.get(category) || "";
-
-    const filePath = path.join(
-      basePath,
-      `${prefixForfile}${cleanName}${extension}`,
-    );
-    if (fs.existsSync(filePath)) {
-      vscode.window.showErrorMessage("El archivo ya existe.");
-      return;
-    }
-
-    fs.writeFileSync(filePath, this.getBoilerplateContent(category, name));
-    refreshAll();
-    vscode.window.showTextDocument(vscode.Uri.file(filePath));
   }
 
   async createNewFolder(
@@ -119,34 +132,37 @@ export class FileManagerService {
     refreshAll: () => void,
     targetNode?: WorkspaceItem,
   ) {
-    let basePath = "";
-    if (targetNode) {
-      const stat = fs.statSync(targetNode.resourceUri.fsPath);
-      basePath = stat.isDirectory()
-        ? targetNode.resourceUri.fsPath
-        : path.dirname(targetNode.resourceUri.fsPath);
-      category = this.getCategoryFromPath(basePath);
-    } else {
-      basePath = this.providers[category].getGlobalCategoryPath() || "";
+    try {
+      let basePath = "";
+      if (targetNode) {
+        basePath = isDirectory(targetNode.resourceUri.fsPath)
+          ? targetNode.resourceUri.fsPath
+          : path.dirname(targetNode.resourceUri.fsPath);
+        category = this.getCategoryFromPath(basePath) ?? category;
+      } else {
+        basePath = this.providers[category].getGlobalCategoryPath() || "";
+      }
+
+      if (!basePath) {
+        vscode.window.showWarningMessage("Por favor configura la ruta global.");
+        return;
+      }
+
+      const name = await vscode.window.showInputBox({
+        prompt: "Nombre de la nueva carpeta",
+      });
+      if (!name) return;
+
+      const folderPath = path.join(basePath, name);
+      if (fs.existsSync(folderPath)) {
+        vscode.window.showErrorMessage("La carpeta ya existe.");
+        return;
+      }
+
+      fs.mkdirSync(folderPath, { recursive: true });
+      refreshAll();
+    } catch (error) {
+      notifyFsError("No se pudo crear la carpeta", error);
     }
-
-    if (!basePath) {
-      vscode.window.showWarningMessage("Por favor configura la ruta global.");
-      return;
-    }
-
-    const name = await vscode.window.showInputBox({
-      prompt: "Nombre de la nueva carpeta",
-    });
-    if (!name) return;
-
-    const folderPath = path.join(basePath, name);
-    if (fs.existsSync(folderPath)) {
-      vscode.window.showErrorMessage("La carpeta ya existe.");
-      return;
-    }
-
-    fs.mkdirSync(folderPath, { recursive: true });
-    refreshAll();
   }
 }

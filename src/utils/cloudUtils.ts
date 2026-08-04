@@ -33,6 +33,7 @@ export function collectLocalFiles(rootDir: string): string[] {
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
+      console.warn(`No se pudo acceder al directorio: ${dir}`);
       return;
     }
     entries.sort((a, b) => a.name.localeCompare(b.name));

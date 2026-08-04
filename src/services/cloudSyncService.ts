@@ -394,6 +394,9 @@ export class CloudSyncService {
     }
 
     report?.("Consultando archivos en GitHub…");
+    console.log(
+      `Iniciando pull desde la nube con owner: ${owner}, repo: ${repo}`,
+    );
     const { defaultBranch } = await this.ensureRepo(owner, repo, token);
     const tree = await apiRequest<GitHubTree>({
       method: "GET",
@@ -401,6 +404,7 @@ export class CloudSyncService {
       token,
     });
 
+    console.log(`Árbol remoto obtenido:`, tree.tree);
     const remoteBlobs = (tree.tree ?? []).filter(
       (t) => t.type === "blob" && !t.path.startsWith(".git/"),
     );
@@ -412,7 +416,7 @@ export class CloudSyncService {
 
     const remoteFiles = remoteBlobs.map((t) => t.path);
     const localFiles = collectLocalFiles(globalPath);
-    const { toDelete } = diffLocalVsRemote(localFiles, remoteFiles);
+    const { toUpload: localOnly } = diffLocalVsRemote(localFiles, remoteFiles);
 
     // Evita que el watcher de auto-sync intente subir mientras escribimos.
     this._syncing = true;
@@ -420,17 +424,33 @@ export class CloudSyncService {
       report?.("Descargando archivos desde GitHub…");
       for (const blob of remoteBlobs) {
         const abs = path.join(globalPath, ...blob.path.split("/"));
-        fs.mkdirSync(path.dirname(abs), { recursive: true });
-        const content = await apiRequest<string>({
-          method: "GET",
-          path: `/repos/${owner}/${repo}/git/blobs/${blob.sha}`,
-          token,
-          raw: true,
-        });
-        fs.writeFileSync(abs, content, "utf8");
+        try {
+          fs.mkdirSync(path.dirname(abs), { recursive: true });
+        } catch (error) {
+          console.error(`Error creando directorio para ${abs}:`, error);
+          continue;
+        }
+        try {
+          const blobData = await apiRequest<{
+            content: string;
+            encoding: string;
+          }>({
+            method: "GET",
+            path: `/repos/${owner}/${repo}/git/blobs/${blob.sha}`,
+            token,
+          });
+          const content = Buffer.from(
+            blobData.content,
+            blobData.encoding === "base64" ? "base64" : "utf8",
+          ).toString("utf8");
+          fs.writeFileSync(abs, content, "utf8");
+        } catch (error) {
+          console.error(`Error descargando/escribiendo ${blob.path}:`, error);
+          continue;
+        }
       }
 
-      for (const rel of toDelete) {
+      for (const rel of localOnly) {
         const abs = path.join(globalPath, ...rel.split("/"));
         if (fs.existsSync(abs)) fs.rmSync(abs, { force: true });
       }

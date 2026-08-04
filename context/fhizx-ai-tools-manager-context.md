@@ -1,7 +1,7 @@
 # Informe de Contexto: Fhizx AI Tools Manager (fhizx-ai-tools-manager)
 
-Fecha de análisis: 2026-08-03
-Versión analizada: 1.4.1
+Fecha de análisis: 2026-08-04
+Versión analizada: 1.4.2
 Tipo: Extensión de Visual Studio Code (TypeScript, CommonJS, target ES2022, VS Code API >= 1.85.0)
 
 ---
@@ -132,6 +132,15 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 2. `updateCopilotConfig` agrega el directorio a `chat.promptFilesLocations` (Global) si falta.
 3. Al activarse, `ensureCopilotPromptConfig` hace lo mismo con directorios ya existentes.
 4. La vista refleja el nuevo estado via `refreshAll`.
+
+**Flujo pull desde la nube (pullFromCloud)**:
+
+1. Se obtiene el arbol recursivo del repositorio remoto via API de GitHub (`/git/trees/{branch}?recursive=1`).
+2. Se filtran solo blobs (archivos), excluyendo `.git/`.
+3. Se comparan archivos locales vs remotos con `diffLocalVsRemote`; se identifica `localOnly` (archivos locales sin contraparte remota, candidatos a eliminar).
+4. Se itera cada blob remoto: se crea el directorio padre (`mkdirSync`) y se descarga el contenido del blob via `/git/blobs/{sha}` (respuesta JSON con contenido base64), se decodifica y se escribe en disco.
+5. Se eliminan archivos `localOnly` que ya no existen en el remoto.
+6. Cada descarga individual esta envuelta en try-catch para que un fallo no aborte el resto.
 
 **Flujo chat participant**:
 
@@ -280,6 +289,7 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **Persistencia de configuracion**: `chat.promptFilesLocations` se actualiza con `ConfigurationTarget.Global`; depende de que el setting exista en la version de VS Code (se ignora silenciosamente si no).
 - **Integracion con Copilot**: la extension asume la ruta `~/.vscode/github-copilot/`; cambios de Copilot en su layout interno romperian la instalacion.
 - **Sincronizacion de datos**: no hay watchers (`FileSystemWatcher`); cambios externos al espacio global no se reflejan hasta un refresh manual o cambio de configuracion.
+- **Pull desde la nube**: la descarga de blobs usa la respuesta JSON (base64) en lugar de `Accept: application/vnd.github.raw`, ya que el media type raw puede no devolver contenido correctamente en todos los escenarios. Cada blob se descarga con try-catch individual para tolerar fallos parciales sin abortar la operacion completa.
 
 ### Deuda Tecnica Identificada
 
@@ -295,3 +305,4 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **`checkForUpdates` con ID hardcodeado** de extension en dos sitios (comando y URL); centralizar en constantes.
 - **Vista Configurations usa caracteres de emoji en los labels** de los items de accion y encabezados, que dependen del soporte de fuente del tema; convendria migrarlos a `ThemeIcon` declarativos o labels planos.
 - **Falta documentacion de arquitectura en el repo**: este documento mitiga parcialmente; conviene mantenerlo al dia con cada release.
+- **`diffLocalVsRemote` con semantica ambigua**: la funcion retorna `toUpload` (local-only) y `toDelete` (remote-only); estos nombres tienen sentido para push pero son confusos en pull. El caller de pull ahora usa `toUpload` renombrado a `localOnly` para eliminar archivos locales obsoletos. Considerar renombrar la API a `localOnly` / `remoteOnly` para claridad.

@@ -48,7 +48,7 @@ Respaldar tus recursos en la nube es gratis e instantáneo. La sección **NUBE G
 
 - **🔗 Conectar Nube**: Pide tu usuario de GitHub, el nombre del repositorio (se crea privado automáticamente si no existe) y un **Personal Access Token** clásico con permiso `repo` (créalo en `github.com/settings/tokens`). Al conectar puedes subir tus archivos de inmediato.
 - **📤 Subir a la Nube**: Sube todos los archivos de tu ruta global al repositorio. Los archivos que elimines localmente también se eliminan en la nube.
-- **📥 Bajar desde la Nube**: Descarga los archivos del repositorio a tu ruta local y limpia los que ya no existan en la nube.
+- **📥 Bajar desde la Nube**: Descarga los archivos del repositorio a tu ruta local y limpia los que ya no existan en la nube. Si algún archivo falla al descargarse, el resto continúa sin interrumpirse.
 - **🔌 Desconectar Nube**: Deja de sincronizar sin borrar tus archivos locales.
 - **Estado de la Nube**: Muestra el repositorio conectado (`usuario/repo`) y si la auto-sincronización está activada o desactivada.
 

@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // 2. Servicios de negocio y chat
-  const fileManager = new FileManagerService(providers);
+  const fileManager = new FileManagerService(providers, cloudService);
   registerChatParticipant(context, fileManager);
 
   // Función global de refresco
@@ -103,11 +103,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Auto-sincronización con la nube (sube cambios al guardar)
   let cloudSyncDisposable: vscode.Disposable | undefined;
-  const restartCloudSync = () => {
+  const restartCloudSync = async () => {
     cloudSyncDisposable?.dispose();
-    cloudSyncDisposable = cloudService.startAutoSync();
+    cloudSyncDisposable = await cloudService.startAutoSync();
   };
-  restartCloudSync();
+  void restartCloudSync();
   context.subscriptions.push({
     dispose: () => {
       cloudSyncDisposable?.dispose();
@@ -120,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (event.affectsConfiguration(CONFIG_NAMESPACE)) {
       const globalPath = getGlobalPathConfig();
       if (globalPath) ensureGlobalStructure(globalPath);
-      restartCloudSync();
+      void restartCloudSync();
     }
   });
 

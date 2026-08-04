@@ -290,7 +290,7 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **Seguridad**: los nombres de archivo se interpolan directamente en rutas (sin sanitizacion); un nombre con separadores (`../`) podria escapar del directorio de categoria si la entrada proviene de fuentes no confiables; hoy el input es del usuario, pero conviene validar.
 - **Persistencia de configuracion**: `chat.promptFilesLocations` se actualiza con `ConfigurationTarget.Global`; depende de que el setting exista en la version de VS Code (se ignora silenciosamente si no).
 - **Integracion con Copilot**: la extension asume la ruta `~/.vscode/github-copilot/`; cambios de Copilot en su layout interno romperian la instalacion.
-- **Sincronizacion de datos**: no hay watchers (`FileSystemWatcher`); cambios externos al espacio global no se reflejan hasta un refresh manual o cambio de configuracion.
+- **Sincronizacion de datos**: la extension usa un `FileSystemWatcher` sobre la ruta global y ademas invoca `schedulePush()` explicitamente tras cada operacion CRUD (crear, renombrar, eliminar archivo/carpeta). Cuando auto-sync esta activado, los cambios se suben automaticamente a la nube tras un debounce de 1,5 s sin ventana de confirmacion. Cambios externos (fuera de la extension) tambien se detectan por el watcher.
 - **Pull desde la nube**: la descarga de blobs usa la respuesta JSON (base64) en lugar de `Accept: application/vnd.github.raw`, ya que el media type raw puede no devolver contenido correctamente en todos los escenarios. Cada blob se descarga con try-catch individual para tolerar fallos parciales sin abortar la operacion completa.
 
 ### Deuda Tecnica Identificada

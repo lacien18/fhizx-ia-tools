@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ConfigurationItem } from "../models/configurationItemModel";
 import { COMMANDS, CONFIG_NAMESPACE, CONFIG_KEYS, ICONS } from "../constants";
+import { CloudSyncService } from "../services/cloudSyncService";
 
 export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<ConfigurationItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -8,7 +9,7 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor() {
+  constructor(private cloudService: CloudSyncService) {
     // Refresca la vista cuando cambia la configuración (ej. nueva ruta global)
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration(CONFIG_NAMESPACE)) {
@@ -34,16 +35,6 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
         "info",
       ),
       new ConfigurationItem(
-        "🗃️ Seleccionar Ruta Global",
-        "- Elige la carpeta donde se guardarán prompts, agents, skills, context y notas.",
-        "",
-        "info",
-        {
-          command: COMMANDS.SET_GLOBAL_PATH,
-          title: "Seleccionar Ruta Global",
-        },
-      ),
-      new ConfigurationItem(
         "🔄 Recargar",
         "- Actualiza todas las vistas (prompts, agents, skills, context, notes y configuración).",
         "",
@@ -64,10 +55,20 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
         },
       ),
       new ConfigurationItem(
-        "🗂️ RUTA GLOBAL",
+        "🗂️ ALMACENAMIENTO LOCAL",
         "",
         "view-pane-container-expanded",
         "info",
+      ),
+      new ConfigurationItem(
+        "🗃️ Seleccionar ruta local",
+        "- Elige la carpeta donde se guardarán prompts, agents, skills, context y notas.",
+        "",
+        "info",
+        {
+          command: COMMANDS.SET_GLOBAL_PATH,
+          title: "Seleccionar Ruta Global",
+        },
       ),
     ];
 
@@ -83,6 +84,81 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
           ? `${globalPath}`
           : "Configura una ruta global para empezar a gestionar tus recursos.",
         isConfigured ? ICONS.PASSED : ICONS.ERROR,
+        "status",
+      ),
+    );
+
+    // 3. Sección de nube gratuita (GitHub)
+    const isCloudConnected = await this.cloudService.isConfigured();
+    const cloudRepo = await this.cloudService.getDisplayRepo();
+    const autoSync = this.cloudService.getAutoSyncEnabled();
+
+    items.push(
+      new ConfigurationItem(
+        "☁️ ALMACENAMIENTO NUBE (GITHUB)",
+        "",
+        "view-pane-container-expanded",
+        "info",
+      ),
+    );
+
+    if (!isCloudConnected) {
+      items.push(
+        new ConfigurationItem(
+          "🔗 Conectar Nube",
+          "- Guarda tus archivos en un repositorio privado y gratuito de GitHub.",
+          "",
+          "info",
+          {
+            command: COMMANDS.CLOUD_CONNECT,
+            title: "Conectar a Nube (GitHub)",
+          },
+        ),
+      );
+    } else {
+      items.push(
+        new ConfigurationItem(
+          "🔌 Desconectar Nube",
+          "- Deja de sincronizar con GitHub (no borra archivos locales).",
+          "",
+          "info",
+          {
+            command: COMMANDS.CLOUD_DISCONNECT,
+            title: "Desconectar Nube",
+          },
+        ),
+      );
+    }
+
+    items.push(
+      new ConfigurationItem(
+        "📤 Subir archivos",
+        "- Sube los cambios locales a GitHub.",
+        "",
+        "info",
+        {
+          command: COMMANDS.CLOUD_PUSH,
+          title: "Subir a la Nube",
+        },
+      ),
+      new ConfigurationItem(
+        "📥 Bajar archivos",
+        "- Descarga los archivos de GitHub a tu ruta local.",
+        "",
+        "info",
+        {
+          command: COMMANDS.CLOUD_PULL,
+          title: "Bajar desde la Nube",
+        },
+      ),
+      new ConfigurationItem(
+        "",
+        isCloudConnected
+          ? `Conectado a ${cloudRepo} · auto-sync ${
+              autoSync ? "activado (pregunta al guardar)" : "desactivado"
+            }`
+          : "No conectado. Usa 'Conectar Nube' para guardar tus archivos gratis en GitHub.",
+        isCloudConnected ? ICONS.PASSED : ICONS.ERROR,
         "status",
       ),
     );

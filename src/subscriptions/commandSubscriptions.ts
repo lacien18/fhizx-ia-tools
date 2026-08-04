@@ -5,6 +5,7 @@ import * as https from "https";
 import { WorkspaceItem } from "../models/workspaceItemModel";
 import { FileManagerService } from "../services/fileManagerService";
 import { InstallationService } from "../services/installationService";
+import { CloudSyncService } from "../services/cloudSyncService";
 import {
   CATEGORIES,
   COMMANDS,
@@ -30,6 +31,7 @@ export function registerCommands(
   context: vscode.ExtensionContext,
   fileManager: FileManagerService,
   refreshAll: () => void,
+  cloudService: CloudSyncService,
 ) {
   const categories = CATEGORIES;
 
@@ -348,6 +350,132 @@ export function registerCommands(
           }
         },
       );
+    }),
+
+    // ------------------------------------------------------------------
+    // Nube gratuita (GitHub)
+    // ------------------------------------------------------------------
+
+    vscode.commands.registerCommand(COMMANDS.CLOUD_CONNECT, async () => {
+      const owner = await vscode.window.showInputBox({
+        title: "Conectar a Nube (GitHub)",
+        prompt: "Usuario u organización de GitHub",
+        placeHolder: "ej. tu-usuario",
+        ignoreFocusOut: true,
+      });
+      if (!owner?.trim()) return;
+
+      const repo = await vscode.window.showInputBox({
+        title: "Conectar a Nube (GitHub)",
+        prompt: "Nombre del repositorio privado (se creará si no existe)",
+        placeHolder: "fhizx-ai-tools-backup",
+        ignoreFocusOut: true,
+      });
+      const repoName = repo?.trim() || "fhizx-ai-tools-backup";
+
+      const token = await vscode.window.showInputBox({
+        title: "Conectar a Nube (GitHub)",
+        prompt:
+          "Personal Access Token (clásico, con permiso 'repo'). Crea uno en github.com/settings/tokens",
+        password: true,
+        ignoreFocusOut: true,
+      });
+      if (!token?.trim()) return;
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Conectando con GitHub…",
+        },
+        async () => {
+          try {
+            const { created, defaultBranch } = await cloudService.connect(
+              owner.trim(),
+              repoName,
+              token.trim(),
+            );
+            vscode.window.showInformationMessage(
+              created
+                ? `Repositorio privado "${owner.trim()}/${repoName}" creado en GitHub.`
+                : `Conectado a "${owner.trim()}/${repoName}" (rama ${defaultBranch}).`,
+            );
+            refreshAll();
+
+            const subir = await vscode.window.showInformationMessage(
+              "¿Quieres subir tus archivos locales a la nube ahora?",
+              "Subir ahora",
+            );
+            if (subir === "Subir ahora") {
+              await vscode.commands.executeCommand(COMMANDS.CLOUD_PUSH);
+            }
+          } catch (error) {
+            notifyFsError("No se pudo conectar con GitHub", error);
+          }
+        },
+      );
+    }),
+
+    vscode.commands.registerCommand(COMMANDS.CLOUD_PUSH, async () => {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Subiendo archivos a la nube…",
+        },
+        async (progress) => {
+          try {
+            const { uploaded } = await cloudService.pushToCloud((msg) =>
+              progress.report({ message: msg }),
+            );
+            vscode.window.showInformationMessage(
+              `Se subieron ${uploaded} archivo(s) a la nube.`,
+            );
+            refreshAll();
+          } catch (error) {
+            notifyFsError("No se pudo subir a la nube", error);
+          }
+        },
+      );
+    }),
+
+    vscode.commands.registerCommand(COMMANDS.CLOUD_PULL, async () => {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Bajando archivos desde la nube…",
+        },
+        async (progress) => {
+          try {
+            const { downloaded } = await cloudService.pullFromCloud((msg) =>
+              progress.report({ message: msg }),
+            );
+            vscode.window.showInformationMessage(
+              `Se descargaron ${downloaded} archivo(s) desde la nube.`,
+            );
+            refreshAll();
+          } catch (error) {
+            notifyFsError("No se pudo bajar desde la nube", error);
+          }
+        },
+      );
+    }),
+
+    vscode.commands.registerCommand(COMMANDS.CLOUD_DISCONNECT, async () => {
+      const confirm = await vscode.window.showWarningMessage(
+        "¿Desconectar la nube? Tus archivos locales no se eliminarán.",
+        { modal: true },
+        "Desconectar",
+      );
+      if (confirm !== "Desconectar") return;
+
+      try {
+        await cloudService.disconnect();
+        vscode.window.showInformationMessage(
+          "Nube desconectada. Tus archivos siguen en la ruta local.",
+        );
+        refreshAll();
+      } catch (error) {
+        notifyFsError("No se pudo desconectar la nube", error);
+      }
     }),
   );
 }

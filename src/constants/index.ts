@@ -31,6 +31,9 @@ export const CONFIG_NAMESPACE = "fhizxAiTools";
 export const CONFIG_KEYS = {
   GLOBAL_PATH: "globalPath",
   PROMPT_FILES_LOCATIONS: "chat.promptFilesLocations",
+  CLOUD_OWNER: "cloud.owner",
+  CLOUD_REPO: "cloud.repo",
+  CLOUD_AUTO_SYNC: "cloud.autoSync",
 } as const;
 
 export const VIEW_IDS = {
@@ -60,6 +63,10 @@ export const COMMANDS = {
   CHECK_FOR_UPDATES: "fhizxAiTools.checkForUpdates",
   WORKBENCH_CHAT_OPEN: "workbench.action.chat.open",
   LIST: "fhizxAiTools.list",
+  CLOUD_CONNECT: "fhizxAiTools.cloudConnect",
+  CLOUD_PUSH: "fhizxAiTools.cloudPush",
+  CLOUD_PULL: "fhizxAiTools.cloudPull",
+  CLOUD_DISCONNECT: "fhizxAiTools.cloudDisconnect",
 } as const;
 
 export const COMMAND_PREFIX = {

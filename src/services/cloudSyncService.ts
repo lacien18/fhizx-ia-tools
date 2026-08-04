@@ -470,12 +470,13 @@ export class CloudSyncService {
    * un pequeño debounce. Devuelve el disposable, o undefined si no aplica
    * (sin ruta global o auto-sync desactivado).
    */
-  startAutoSync(): vscode.Disposable | undefined {
+  async startAutoSync(): Promise<vscode.Disposable | undefined> {
     this.stopAutoSync();
 
     const globalPath = getGlobalPathConfig();
     if (!globalPath) return undefined;
     if (!this.getAutoSyncEnabled()) return undefined;
+    if (!(await this.isConfigured())) return undefined;
 
     this._watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(globalPath, "**"),
@@ -507,36 +508,23 @@ export class CloudSyncService {
     }
   }
 
+  /** Programa un push con debounce si auto-sync está activado. */
+  schedulePush(): void {
+    if (!this.getAutoSyncEnabled()) return;
+    if (this._syncing) return;
+    if (this._debounceTimer) clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => {
+      this._debounceTimer = undefined;
+      void this.autoPush();
+    }, AUTO_SYNC_DEBOUNCE_MS);
+  }
+
   private async autoPush(): Promise<void> {
     if (this._syncing) return;
     if (!(await this.isConfigured())) return;
 
     this._syncing = true;
     try {
-      // Modal: pregunta si se quieren subir los cambios detectados en la nube.
-      const answer = await vscode.window.showWarningMessage(
-        "Se detectaron cambios en tu espacio de FhizxAITools. ¿Quieres subirlos a la nube?",
-        { modal: true },
-        "Subir ahora",
-        "No",
-        "No preguntar más",
-      );
-
-      if (answer === "No preguntar más") {
-        const config = vscode.workspace.getConfiguration(CONFIG_NAMESPACE);
-        await config.update(
-          CONFIG_KEYS.CLOUD_AUTO_SYNC,
-          false,
-          vscode.ConfigurationTarget.Global,
-        );
-        vscode.window.showInformationMessage(
-          "Auto-sincronización desactivada. Puedes reactivarla con la opción fhizxAiTools.cloud.autoSync o en la vista Configurations.",
-        );
-        return;
-      }
-
-      if (answer !== "Subir ahora") return;
-
       const { uploaded } = await this.pushToCloud();
       if (uploaded > 0) {
         vscode.window.showInformationMessage(

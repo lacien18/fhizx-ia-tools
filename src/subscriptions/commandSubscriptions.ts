@@ -190,6 +190,7 @@ export function registerCommands(
         try {
           fs.renameSync(oldPath, newPath);
           refreshAll();
+          cloudService.schedulePush();
           vscode.window.showInformationMessage(
             "Elemento modificado exitosamente.",
           );
@@ -213,6 +214,7 @@ export function registerCommands(
         try {
           deletePath(node.resourceUri.fsPath, node.isFolder);
           refreshAll();
+          cloudService.schedulePush();
           vscode.window.showInformationMessage("Elemento eliminado.");
         } catch (error) {
           notifyFsError("No se pudo eliminar el elemento", error);

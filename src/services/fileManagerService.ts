@@ -11,6 +11,7 @@ import {
 } from "../constants";
 import { isDirectory, safeReadFile, toPromptFileName } from "../utils/fsUtils";
 import { getGlobalPathConfig, notifyFsError } from "../utils/resourceUtils";
+import { CloudSyncService } from "./cloudSyncService";
 
 /**
  * Providers de categoría expuestos al FileManagerService.
@@ -23,7 +24,10 @@ export interface CategoryProvider {
 export type FileManagerProviders = Record<CategoryType, CategoryProvider>;
 
 export class FileManagerService {
-  constructor(private providers: FileManagerProviders) {}
+  constructor(
+    private providers: FileManagerProviders,
+    private cloudService?: CloudSyncService,
+  ) {}
 
   getCategoryFromPath(targetPath: string): CategoryType | undefined {
     for (const key of CATEGORIES) {
@@ -121,6 +125,7 @@ export class FileManagerService {
 
       fs.writeFileSync(filePath, this.getBoilerplateContent(category, name));
       refreshAll();
+      this.cloudService?.schedulePush();
       vscode.window.showTextDocument(vscode.Uri.file(filePath));
     } catch (error) {
       notifyFsError("No se pudo crear el archivo", error);
@@ -161,6 +166,7 @@ export class FileManagerService {
 
       fs.mkdirSync(folderPath, { recursive: true });
       refreshAll();
+      this.cloudService?.schedulePush();
     } catch (error) {
       notifyFsError("No se pudo crear la carpeta", error);
     }

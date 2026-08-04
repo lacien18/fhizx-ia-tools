@@ -2,7 +2,7 @@
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
   "description": "Gestiona prompts, agents, skills, context y notas para herramientas de IA",
-  "version": "1.5.0",
+  "version": "1.4.1",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -377,7 +377,7 @@
         "fhizxAiTools.cloud.autoSync": {
           "type": "boolean",
           "default": true,
-          "description": "Sube automáticamente los cambios a la nube al crear, modificar o eliminar archivos."
+          "description": "Al crear, modificar o eliminar archivos, pregunta si quieres subir los cambios a la nube. Desactívalo para desactivar la sincronización automática."
         }
       }
     }

@@ -490,9 +490,39 @@ export class CloudSyncService {
   private async autoPush(): Promise<void> {
     if (this._syncing) return;
     if (!(await this.isConfigured())) return;
+
     this._syncing = true;
     try {
-      await this.pushToCloud();
+      // Modal: pregunta si se quieren subir los cambios detectados en la nube.
+      const answer = await vscode.window.showWarningMessage(
+        "Se detectaron cambios en tu espacio de FhizxAITools. ¿Quieres subirlos a la nube?",
+        { modal: true },
+        "Subir ahora",
+        "No",
+        "No preguntar más",
+      );
+
+      if (answer === "No preguntar más") {
+        const config = vscode.workspace.getConfiguration(CONFIG_NAMESPACE);
+        await config.update(
+          CONFIG_KEYS.CLOUD_AUTO_SYNC,
+          false,
+          vscode.ConfigurationTarget.Global,
+        );
+        vscode.window.showInformationMessage(
+          "Auto-sincronización desactivada. Puedes reactivarla con la opción fhizxAiTools.cloud.autoSync o en la vista Configurations.",
+        );
+        return;
+      }
+
+      if (answer !== "Subir ahora") return;
+
+      const { uploaded } = await this.pushToCloud();
+      if (uploaded > 0) {
+        vscode.window.showInformationMessage(
+          `Se subieron ${uploaded} archivo(s) a la nube.`,
+        );
+      }
     } catch (error) {
       console.warn("FhizxAITools: Auto-sincronización fallida", error);
       vscode.window.showWarningMessage(

@@ -52,7 +52,7 @@ Respaldar tus recursos en la nube es gratis e instantáneo. La sección **NUBE G
 - **🔌 Desconectar Nube**: Deja de sincronizar sin borrar tus archivos locales.
 - **Estado de la Nube**: Muestra el repositorio conectado (`usuario/repo`) y si la auto-sincronización está activada o desactivada.
 
-> ⚙️ **Auto-sincronización**: por defecto, la extensión sube los cambios automáticamente al crear, modificar o eliminar archivos en tu ruta global (con un pequeño debounce de ~1,5 s). Puedes desactivarla con la opción `fhizxAiTools.cloud.autoSync` en la configuración de usuario.
+> ⚙️ **Auto-sincronización**: por defecto, al crear, modificar o eliminar archivos en tu ruta global, la extensión muestra una ventana preguntando si quieres subir los cambios a la nube (con un pequeño debounce de ~1,5 s). Puedes elegir **Subir ahora**, **No** o **No preguntar más** (esta última desactiva la auto-sincronización). Vuelve a activarla con la opción `fhizxAiTools.cloud.autoSync` en la configuración de usuario.
 
 ### Navegación y Creación
 En el panel lateral podrás ver las secciones correspondientes a Prompts, Agents, Skills, Context y Notes. Utiliza los botones en la barra superior o el menú contextual para:

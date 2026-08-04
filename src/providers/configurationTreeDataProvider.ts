@@ -155,7 +155,7 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
         "",
         isCloudConnected
           ? `Conectado a ${cloudRepo} · auto-sync ${
-              autoSync ? "activado" : "desactivado"
+              autoSync ? "activado (pregunta al guardar)" : "desactivado"
             }`
           : "No conectado. Usa 'Conectar Nube' para guardar tus archivos gratis en GitHub.",
         isCloudConnected ? ICONS.PASSED : ICONS.ERROR,

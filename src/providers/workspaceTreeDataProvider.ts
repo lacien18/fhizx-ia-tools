@@ -10,7 +10,7 @@ import {
   type CategoryType,
 } from "../constants";
 
-export class workspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
+export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
     WorkspaceItem | undefined | void
   >();
@@ -28,15 +28,12 @@ export class workspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
 
   async getChildren(element?: WorkspaceItem): Promise<WorkspaceItem[]> {
     const globalPath = this.getGlobalCategoryPath();
-    if (!globalPath) return [];
+    if (!globalPath || !fs.existsSync(globalPath)) return [];
 
     const targetPath = element ? element.resourceUri.fsPath : globalPath;
+    if (!fs.existsSync(targetPath)) return [];
 
     try {
-      if (!fs.existsSync(targetPath)) {
-        fs.mkdirSync(targetPath, { recursive: true });
-      }
-
       const entries = fs.readdirSync(targetPath, { withFileTypes: true });
       const items: WorkspaceItem[] = [];
 

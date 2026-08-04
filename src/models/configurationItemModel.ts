@@ -13,7 +13,9 @@ export class ConfigurationItem extends vscode.TreeItem {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.description = description;
     this.tooltip = description;
-    this.contextValue = `config_info`;
+    // El contextValue se deriva de `kind` para que los menús de package.json
+    // (`config_info`, `config_status`, `config_action`) se activen correctamente.
+    this.contextValue = `config_${kind}`;
     if (iconName) this.iconPath = new vscode.ThemeIcon(iconName);
     if (command) this.command = command;
   }

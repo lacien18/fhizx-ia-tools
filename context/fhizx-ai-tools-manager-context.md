@@ -83,7 +83,7 @@
 ### 🏗️ Patrón de Arquitectura
 Extensión de VS Code **monolítica y modular por capas**, estilo **Provider-Service**:
 
-- **Capa de Presentación (Providers)**: `TreeDataProvider`s que alimentan las vistas de la barra lateral (`workspaceTreeDataProvider`, `TokenCounterTreeDataProvider`, `ConfigurationTreeDataProvider`).
+- **Capa de Presentación (Providers)**: `TreeDataProvider`s que alimentan las vistas de la barra lateral (`WorkspaceTreeDataProvider`, `TokenCounterTreeDataProvider`, `ConfigurationTreeDataProvider`).
 - **Capa de Servicios (Dominio)**: lógica de negocio sobre el sistema de archivos y configuración (`FileManagerService`, `InstallationService`) y la integración con chat (`chatParticipantService`).
 - **Capa de Modelos**: envoltorios de `vscode.TreeItem` (`WorkspaceItem`, `ConfigurationItem`, `TokenStatItem`).
 - **Capa de Presentación/Orquestación**: `extension.ts` (composición del grafo de dependencias) y `commandSubscriptions.ts` (registro de comandos).
@@ -163,13 +163,13 @@ flowchart TD
 | Componente | Archivo | Responsabilidad única |
 | :--- | :--- | :--- |
 | `activate()` | `src/extension.ts` | Composición del grafo: instancia providers, servicios y comandos; verificación inicial de config; `ensureCopilotPromptConfig` |
-| `workspaceTreeDataProvider` | `src/providers/workspaceTreeDataProvider.ts` | Render del árbol de archivos/carpetas de una categoría; validación de extensiones; estado instalado |
+| `WorkspaceTreeDataProvider` | `src/providers/workspaceTreeDataProvider.ts` | Render del árbol de archivos/carpetas de una categoría; validación de extensiones; estado instalado |
 | `TokenCounterTreeDataProvider` | `src/providers/tokenCounterProvider.ts` | Estadísticas y costos del archivo activo |
 | `ConfigurationTreeDataProvider` | `src/providers/configurationTreeDataProvider.ts` | Vista "Configurations" (acciones y estado de la ruta global) |
 | `FileManagerService` | `src/services/fileManagerService.ts` | CRUD de recursos: crear archivos/carpetas, boilerplates, búsqueda recursiva, resolución de categoría |
 | `InstallationService` | `src/services/installationService.ts` | Instalar/desinstalar en Copilot y actualizar `chat.promptFilesLocations` (métodos estáticos) |
 | `registerChatParticipant` | `src/services/chatParticipantService.ts` | Registro del participante `@fhizx-ai-tools` y lógica del comando `usar <nombre>` |
-| `registerCommands` | `src/suscriptions/commandSubscriptions.ts` | Registro de todos los comandos `fhizxAiTools.*` (incl. generadores dinámicos por categoría) |
+| `registerCommands` | `src/subscriptions/commandSubscriptions.ts` | Registro de todos los comandos `fhizxAiTools.*` (incl. generadores dinámicos por categoría) |
 | `WorkspaceItem` | `src/models/workspaceItemModel.ts` | TreeItem de archivo/carpeta con contextValue, icono de estado y comando de apertura |
 | `ConfigurationItem` | `src/models/configurationItemModel.ts` | TreeItem de la vista de configuración |
 | `TokenStatItem` | `src/models/tokenStatItemModel.ts` | TreeItem de estadística del token counter |
@@ -229,8 +229,8 @@ flowchart TD
 ### 🧹 Convenciones y Estándares (preservar)
 
 - **Naming de archivos**: prefijos `p-`/`a-`/`s-`/`c-`; extensión `.prompt.md` (menos `notes` → `.md`).
-- **Naming de código**: comandos `fhizxAiTools.<verbo>[Objeto]`; vistas `fhizxAiTools.<categoría>`; clases PascalCase (⚠️ `workspaceTreeDataProvider` es la excepción actual).
-- **Estructura**: `providers/`, `services/`, `models/`, `suscriptions/` (typo heredado), `constants/`, `versions/`.
+- **Naming de código**: comandos `fhizxAiTools.<verbo>[Objeto]`; vistas `fhizxAiTools.<categoría>`; clases PascalCase (`WorkspaceTreeDataProvider`).
+- **Estructura**: `providers/`, `services/`, `models/`, `subscriptions/`, `utils/`, `constants/`, `versions/`.
 - **Centralización**: toda constante repetida vive en `src/constants/index.ts` (nunca literales sueltos).
 - **UI en español**: textos de comandos, mensajes y menús en español (títulos de vistas con emoji).
 - **Comentarios en español** y marca de sección tipo `// 1. ...` en `extension.ts`.
@@ -270,6 +270,12 @@ flowchart TD
 - **Persistencia del layout**: la vista puede "desaparecer" por `views.customizations` en `state.vscdb` → fix con `Developer: Reset View Locations`.
 
 ### 🩹 Deuda Técnica Identificada (hallazgos del análisis)
+
+> ✅ **Estado (2026-08-03):** los hallazgos 1-11 fueron **resueltos**; el hallazgo 12 se mitigó parcialmente (se añadió el comando `listar` y `fhizxAiTools.list`).
+> Cambios aplicados: comandos `toggleInstall`/`openGlobalPath` registrados; `ConfigurationItem.contextValue` derivado de `kind`; icono del participante apuntando a `assets/logo.png`; clase `WorkspaceTreeDataProvider` y carpeta `subscriptions/`; utilidades `src/utils/fsUtils.ts` + `src/utils/resourceUtils.ts`; `FileManagerService` tipado sin `any`; `getChildren()` sin side-effect; `checkForUpdates` consulta el Marketplace; errores de FS capturados con `notifyFsError`; suite de tests vitest (`npm test`).
+
+> ✅ **Estado (2026-08-03):** los hallazgos 1-11 fueron **resueltos** (ver commit de resolución); el hallazgo 12 se mitigó parcialmente (se añadió `listar` + comando `fhizxAiTools.list`).
+> Cambios aplicados: comandos `toggleInstall`/`openGlobalPath` registrados; `ConfigurationItem.contextValue` derivado de `kind`; icono del participante apuntando a `assets/logo.png`; clase `WorkspaceTreeDataProvider` y carpeta `subscriptions/`; utilidades `src/utils/fsUtils.ts` + `src/utils/resourceUtils.ts`; `FileManagerService` tipado sin `any`; `getChildren()` sin side-effect; `checkForUpdates` consulta el Marketplace; errores de FS capturados con `notifyFsError`; suite de tests vitest (`npm test`).
 
 1. **🔴 Comandos declarados pero NO registrados**: `fhizxAiTools.toggleInstall` y `fhizxAiTools.openGlobalPath` existen en `constants/index.ts` y `package.json` (menús inline de la vista Configurations), pero **no están registrados en `registerCommands`**. Al hacer clic, VS Code lanza "command not found". Falta implementación (el `toggleInstall` debería usar QuickPick instalar/desinstalar; `openGlobalPath` debería usar `revealFileInOS`).
 2. **🔴 `contextValue` roto en Configurations**: `ConfigurationItem` **siempre** fija `this.contextValue = "config_info"` e ignora el parámetro `kind`. Los menús de `package.json` esperan `config_status` y `config_action` (`view/item/context`), por lo que los botones inline **nunca se renderizan**. El tipo `ConfigurationItemKind` está definido pero no se usa.

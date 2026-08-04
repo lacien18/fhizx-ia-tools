@@ -18,11 +18,12 @@ export const COPILOT_CATEGORIES = [
   "context",
 ] as const;
 
-export const FILE_PREFIXES = {
+export const FILE_PREFIXES: Record<CategoryType, string> = {
   prompts: "p-",
   agents: "a-",
   skills: "s-",
   context: "c-",
+  notes: "",
 } as const;
 
 export const CONFIG_NAMESPACE = "fhizxAiTools";
@@ -58,6 +59,7 @@ export const COMMANDS = {
   UNINSTALL_ITEM: "fhizxAiTools.uninstallItem",
   CHECK_FOR_UPDATES: "fhizxAiTools.checkForUpdates",
   WORKBENCH_CHAT_OPEN: "workbench.action.chat.open",
+  LIST: "fhizxAiTools.list",
 } as const;
 
 export const COMMAND_PREFIX = {

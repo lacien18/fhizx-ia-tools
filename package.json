@@ -2,7 +2,7 @@
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
   "description": "Gestiona prompts, agents, skills, context y notas para herramientas de IA",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -194,6 +194,26 @@
         "command": "fhizxAiTools.openGlobalPath",
         "title": "Abrir Ruta Global",
         "icon": "$(folder-opened)"
+      },
+      {
+        "command": "fhizxAiTools.cloudConnect",
+        "title": "Conectar a Nube (GitHub)",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "fhizxAiTools.cloudPush",
+        "title": "Subir a la Nube",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "fhizxAiTools.cloudPull",
+        "title": "Bajar desde la Nube",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "fhizxAiTools.cloudDisconnect",
+        "title": "Desconectar Nube",
+        "icon": "$(cloud-upload)"
       }
     ],
     "submenus": [
@@ -214,6 +234,11 @@
           "command": "fhizxAiTools.setGlobalPath",
           "when": "view == fhizxAiTools.configurations",
           "group": "navigation@2"
+        },
+        {
+          "command": "fhizxAiTools.cloudConnect",
+          "when": "view == fhizxAiTools.configurations",
+          "group": "navigation@3"
         },
         {
           "command": "fhizxAiTools.createPromptFile",
@@ -338,6 +363,21 @@
           "type": "string",
           "default": "",
           "description": "Ruta global donde se almacenarán los prompts, agents, skills, context y notas."
+        },
+        "fhizxAiTools.cloud.owner": {
+          "type": "string",
+          "default": "",
+          "description": "Usuario u organización de GitHub donde se guardan tus recursos en la nube."
+        },
+        "fhizxAiTools.cloud.repo": {
+          "type": "string",
+          "default": "",
+          "description": "Repositorio privado de GitHub (se crea automáticamente si no existe)."
+        },
+        "fhizxAiTools.cloud.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Sube automáticamente los cambios a la nube al crear, modificar o eliminar archivos."
         }
       }
     }

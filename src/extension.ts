@@ -4,6 +4,7 @@ import { TokenCounterTreeDataProvider } from "./providers/tokenCounterProvider";
 import { ConfigurationTreeDataProvider } from "./providers/configurationTreeDataProvider";
 import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
+import { CloudSyncService } from "./services/cloudSyncService";
 import { registerCommands } from "./subscriptions/commandSubscriptions";
 import {
   CONFIG_NAMESPACE,
@@ -19,6 +20,9 @@ import {
 } from "./utils/resourceUtils";
 
 export function activate(context: vscode.ExtensionContext) {
+  // Servicio de nube gratuita (GitHub)
+  const cloudService = new CloudSyncService(context);
+
   // 1. Inicialización de Providers
   const providers = {
     prompts: new WorkspaceTreeDataProvider("prompts"),
@@ -27,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
     context: new WorkspaceTreeDataProvider("context"),
     notes: new WorkspaceTreeDataProvider("notes"),
     tokenCounterProvider: new TokenCounterTreeDataProvider(),
-    configurations: new ConfigurationTreeDataProvider(),
+    configurations: new ConfigurationTreeDataProvider(cloudService),
   };
 
   // Registro de DataProviders en la UI de VS Code
@@ -60,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   // 3. Suscripciones de Comandos
-  registerCommands(context, fileManager, refreshAll);
+  registerCommands(context, fileManager, refreshAll, cloudService);
 
   // Comando de listado (usado por el chat participant `listar`)
   context.subscriptions.push(
@@ -97,11 +101,26 @@ export function activate(context: vscode.ExtensionContext) {
     if (globalPath) ensureGlobalStructure(globalPath);
   }
 
-  // Al cambiar la ruta global, recrear la estructura de carpetas
+  // Auto-sincronización con la nube (sube cambios al guardar)
+  let cloudSyncDisposable: vscode.Disposable | undefined;
+  const restartCloudSync = () => {
+    cloudSyncDisposable?.dispose();
+    cloudSyncDisposable = cloudService.startAutoSync();
+  };
+  restartCloudSync();
+  context.subscriptions.push({
+    dispose: () => {
+      cloudSyncDisposable?.dispose();
+      cloudSyncDisposable = undefined;
+    },
+  });
+
+  // Al cambiar la configuración, recrear la estructura y el watcher de nube
   vscode.workspace.onDidChangeConfiguration((event) => {
     if (event.affectsConfiguration(CONFIG_NAMESPACE)) {
       const globalPath = getGlobalPathConfig();
       if (globalPath) ensureGlobalStructure(globalPath);
+      restartCloudSync();
     }
   });
 

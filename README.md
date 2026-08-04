@@ -22,6 +22,8 @@
 
 - **Espacio Global Personalizable**: Define una ruta única mediante la configuración de VS Code donde se almacenarán todos tus recursos, permitiéndote acceder a ellos independientemente del proyecto en el que estés trabajando actualmente. Al configurarla, la extensión crea automáticamente las carpetas `prompts`, `agents`, `skills`, `context` y `notes`.
 
+- **☁️ Nube Gratuita (GitHub)**: Conecta tu espacio global a un repositorio privado y gratuito de GitHub para respaldar tus archivos en la nube. Sincronización automática al guardar (o manual con los botones **Subir / Bajar**), sin necesidad de Git instalado localmente. El repositorio se crea automáticamente si no existe y tu token se guarda de forma segura en el SecretStorage de VS Code.
+
 - **Chat Participant (`@fhizx-ai-tools`)**: Interactúa con tu espacio global directamente desde el chat de Copilot o herramientas integradas usando comandos como `@fhizx-ai-tools usar <nombre>` para cargar contenido instantáneamente a partir de tus archivos locales gestionados por la extensión.
 
 ## 🛠️ Instalación y Configuración
@@ -40,6 +42,17 @@ Esta vista es el centro de control de la extensión:
 - **Estado de la Ruta Global**: Indica si la ruta está configurada (✅) o si aún falta por configurar (❌).
 - **Abrir Ruta Global** (icono de carpeta): Abre la ruta global en el explorador de archivos del sistema.
 - **Instalar / Desinstalar en Copilot** (icono de sincronización): Alterna la instalación de un recurso en Copilot.
+
+### ☁️ Nube Gratuita (GitHub)
+Respaldar tus recursos en la nube es gratis e instantáneo. La sección **NUBE GRATUITA (GITHUB)** de la vista Configurations incluye:
+
+- **🔗 Conectar Nube**: Pide tu usuario de GitHub, el nombre del repositorio (se crea privado automáticamente si no existe) y un **Personal Access Token** clásico con permiso `repo` (créalo en `github.com/settings/tokens`). Al conectar puedes subir tus archivos de inmediato.
+- **📤 Subir a la Nube**: Sube todos los archivos de tu ruta global al repositorio. Los archivos que elimines localmente también se eliminan en la nube.
+- **📥 Bajar desde la Nube**: Descarga los archivos del repositorio a tu ruta local y limpia los que ya no existan en la nube.
+- **🔌 Desconectar Nube**: Deja de sincronizar sin borrar tus archivos locales.
+- **Estado de la Nube**: Muestra el repositorio conectado (`usuario/repo`) y si la auto-sincronización está activada o desactivada.
+
+> ⚙️ **Auto-sincronización**: por defecto, la extensión sube los cambios automáticamente al crear, modificar o eliminar archivos en tu ruta global (con un pequeño debounce de ~1,5 s). Puedes desactivarla con la opción `fhizxAiTools.cloud.autoSync` en la configuración de usuario.
 
 ### Navegación y Creación
 En el panel lateral podrás ver las secciones correspondientes a Prompts, Agents, Skills, Context y Notes. Utiliza los botones en la barra superior o el menú contextual para:
@@ -92,6 +105,19 @@ Una vez configurado tu espacio global, puedes invocar al participante `@fhizx-ai
 | `fhizxAiTools.uninstallItem` | Desinstalar de Copilot | $(remove) |
 | `fhizxAiTools.toggleInstall` | Instalar / Desinstalar en Copilot | $(sync) |
 | `fhizxAiTools.checkForUpdates` | Buscar Actualizaciones | — |
+| `fhizxAiTools.cloudConnect` | Conectar a Nube (GitHub) | $(cloud-download) |
+| `fhizxAiTools.cloudPush` | Subir a la Nube | $(cloud-upload) |
+| `fhizxAiTools.cloudPull` | Bajar desde la Nube | $(cloud-download) |
+| `fhizxAiTools.cloudDisconnect` | Desconectar Nube | $(cloud-upload) |
+
+## ⚙️ Configuración
+
+| Opción | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `fhizxAiTools.globalPath` | string | Ruta global donde se almacenan prompts, agents, skills, context y notas. |
+| `fhizxAiTools.cloud.owner` | string | Usuario u organización de GitHub de la nube (se guarda al conectar). |
+| `fhizxAiTools.cloud.repo` | string | Repositorio privado de GitHub (se crea automáticamente si no existe). |
+| `fhizxAiTools.cloud.autoSync` | boolean | Sube automáticamente los cambios a la nube al crear, modificar o eliminar archivos (por defecto `true`). |
 
 ---
 *Desarrollado para potenciar el flujo de trabajo con IA en Visual Studio Code.*

@@ -1,302 +1,297 @@
-# 📋 Informe de Contexto — Fhizx AI Tools Manager
+# Informe de Contexto: Fhizx AI Tools Manager (fhizx-ai-tools-manager)
 
-> **Proyecto:** `fhizx-ai-tools-manager` — Extensión de Visual Studio Code
-> **Versión analizada:** 1.4.0 (`package.json`) · Fuente en `src/`
-> **Fecha del análisis:** 2026-08-03
-> **Rol del análisis:** Arquitecto de Software Senior — Revisión de contexto para futuras implementaciones
+Fecha de análisis: 2026-08-03
+Versión analizada: 1.4.1
+Tipo: Extensión de Visual Studio Code (TypeScript, CommonJS, target ES2022, VS Code API >= 1.85.0)
 
 ---
 
 ## 1. Resumen Ejecutivo y Dominio de Negocio
 
-### 🎯 Propósito
-**Fhizx AI Tools Manager** es una extensión de VS Code que centraliza, organiza y gestiona el ecosistema personal de "herramientas de IA" del usuario (prompts, agents, skills, context y notes) en un **espacio global** independiente del proyecto abierto. Su valor principal:
+### Propósito
 
-1. **Gestión centralizada de recursos** de IA (crear, renombrar, eliminar, navegar) desde la barra lateral del editor.
-2. **Integración con GitHub Copilot**: instala/desinstala recursos copiándolos a `~/.vscode/github-copilot/<categoría>/` y registrándolos en `chat.promptFilesLocations`, de modo que Copilot los consuma como *prompt files*.
-3. **Interfaz de chat** (`@fhizx-ai-tools`) para invocar recursos por nombre sin salir del chat de Copilot.
-4. **Métricas de tokens y costo** del archivo activo (token counter).
+**Fhizx AI Tools Manager** es una extensión de VS Code que centraliza, organiza y gestiona el ecosistema personal de herramientas de Inteligencia Artificial de un desarrollador directamente desde el editor. Resuelve el problema de dispersión de prompts, agents, skills, contextos y notas que normalmente se guardan en ubicaciones arbitrarias del disco, sin convenciones ni visibilidad.
 
-### 🧠 Conceptos Clave (Terminología del negocio)
+El valor principal de la extensión se divide en tres frentes:
 
-| Término | Definición |
+1. **Espacio global personalizable**: define una ruta única (configuración `fhizxAiTools.globalPath`) que almacena las categorías `prompts`, `agents`, `skills`, `context` y `notes`, accesible desde cualquier proyecto.
+2. **Integración con GitHub Copilot**: permite instalar y desinstalar recursos copiándolos a `~/.vscode/github-copilot/<categoria>/` (con conversión automática a `.prompt.md`) y registrándolos en `chat.promptFilesLocations`, de modo que Copilot los consuma como prompt files.
+3. **Chat Participant `@fhizx-ai-tools`**: expone los recursos dentro del chat de Copilot mediante los comandos `usar <nombre>` (carga contenido recursivamente) y `listar [filtro]`.
+
+Adicionalmente incluye una vista de contador de tokens del archivo activo con estimación de costo por modelo.
+
+### Conceptos Clave
+
+| Termino | Definicion |
 | :--- | :--- |
-| **Espacio Global** | Ruta absoluta configurada por el usuario en `fhizxAiTools.globalPath` donde se almacenan todos los recursos. Si no existe, la extensión crea las subcarpetas de categorías automáticamente. |
-| **Categoría** | Tipo de recurso gestionado: `prompts`, `agents`, `skills`, `context`, `notes` (constante `CATEGORIES`). |
-| **Recurso** | Archivo Markdown (`.prompt.md` para prompts/agents/skills/context; `.md` para notes) o carpeta dentro del espacio global. |
-| **Instalado en Copilot** | Estado de un recurso cuyo archivo fue copiado a `~/.vscode/github-copilot/<categoría>/`. Se refleja con icono ✅/❌ (tema `testing-passed-icon` / `notebook-state-error`). |
-| **Prompt Files Locations** | Configuración de VS Code (`chat.promptFilesLocations`) que registra carpetas de las que Copilot lee archivos de prompt. |
-| **Boilerplate** | Plantilla Markdown con estructura recomendada que se genera al crear un recurso nuevo (según categoría). |
-| **Prefijo de archivo** | Convención de naming: `p-` (prompts), `a-` (agents), `s-` (skills), `c-` (context). `notes` no usa prefijo. |
-| **Chat Participant** | Participante de chat registrado (`@fhizx-ai-tools`) que permite cargar recursos con el comando `usar <nombre>`. |
+| **Ruta Global** | Carpeta raiz definida en `fhizxAiTools.globalPath` donde viven las categorias de recursos. Sin ella la extension queda en estado de onboarding. |
+| **Categoria** | Tipo de recurso gestionado: `prompts`, `agents`, `skills`, `context`, `notes`. Es la unidad de organizacion del espacio global. |
+| **Categoria Copilot** | Subconjunto instalable en Copilot: `prompts`, `agents`, `skills`, `context` (se excluye `notes`). |
+| **Recurso** | Archivo o carpeta dentro de una categoria. Los archivos usan extension `.prompt.md` salvo `notes`, que usa `.md`. |
+| **Instalacion en Copilot** | Copia de un recurso a `~/.vscode/github-copilot/<categoria>/` con nombre normalizado a `.prompt.md` y registro en `chat.promptFilesLocations`. |
+| **Prompt File** | Archivo de instrucciones que Copilot carga como prompt de archivo; se declara en `chat.promptFilesLocations`. |
+| **Boilerplate** | Plantilla Markdown generada automaticamente al crear un archivo nuevo, especifica por categoria. |
+| **Prefijo de nombre** | Convencion aplicada por categoria: `p-` (prompts), `a-` (agents), `s-` (skills), `c-` (context), sin prefijo en notes. |
+| **WorkspaceItem** | Modelo de ítem de arbol que representa un archivo o carpeta del espacio global. |
+| **Estado de instalacion** | Indicador por archivo: instalado (icono verde) o pendiente (icono rojo); deriva de `InstallationService.isInstalled`. |
 
 ---
 
 ## 2. Casos de Uso y Actores
 
-### 👥 Actores / Roles
+### Actores / Roles
 
-| Actor | Interacción |
+| Actor | Interaccion |
 | :--- | :--- |
-| **Usuario Final** | Usa las vistas, comandos y menús contextuales de la extensión; configura la ruta global; interactúa con el chat participant. |
-| **VS Code (Host)** | Ejecuta los comandos (`fhizxAiTools.*`), renderiza los `TreeDataProvider`, dispara eventos (`onDidChangeConfiguration`, `onDidChangeActiveTextEditor`, `onDidChangeTextDocument`). |
-| **GitHub Copilot** | Servicio externo que lee los *prompt files* desde `~/.vscode/github-copilot/<categoría>/` y ejecuta el chat participant. |
-| **Sistema de Archivos** | Persistencia de los recursos (leer/crear/renombrar/eliminar/copiar). |
-| **Evento / Cron** | Activación `onStartupFinished` y verificación de configuración al arrancar; sincronización con Copilot al activarse (`ensureCopilotPromptConfig`). |
+| **Usuario Final (Desarrollador)** | Interactua con las vistas del arbol, menus contextuales, comandos, QuickPicks, dialogs de entrada y el chat de Copilot. |
+| **GitHub Copilot** | Destino de la instalacion de recursos (directorio `~/.vscode/github-copilot/`) y host del chat participant. |
+| **VS Code Marketplace** | Origen de la verificacion de version (`checkForUpdates` via API `extensionquery`). |
+| **Sistema de Archivos** | Fuente de verdad de los recursos (ruta global) y del directorio Copilot. |
+| **Eventos / Cron de VS Code** | `onStartupFinished` (activacion), `onDidChangeConfiguration` (refresco y reestructuracion), `onDidChangeActiveTextEditor` y `onDidChangeTextDocument` (token counter), cambios en documentos de texto. |
 
-### ✅ Casos de Uso Principales (Happy Path)
+### Casos de Uso Principales (Happy Path)
 
-1. **Configurar Ruta Global** (`fhizxAiTools.setGlobalPath`): el usuario selecciona una carpeta → se guarda en `fhizxAiTools.globalPath` → se crean las 5 subcarpetas de categoría → se refrescan todas las vistas. Al primer arranque sin ruta, la extensión muestra un mensaje de bienvenida con acceso directo.
-2. **Crear Recurso** (`fhizxAiTools.create<X>File` / `create<X>Folder`): el usuario nombra el archivo/carpeta → se aplica prefijo y extensión correcta según categoría → se genera boilerplate → se abre el archivo en el editor.
-3. **Navegar y Abrir**: el usuario explora el árbol de recursos y hace clic → `fhizxAiTools.openFile` muestra el documento.
-4. **Enviar al Chat** (`fhizxAiTools.sendToChat`): el contenido del recurso se inyecta como `query` parcial en el chat de Copilot (`workbench.action.chat.open`); si falla, *fallback* a portapapeles.
-5. **Copiar al Portapapeles** (`fhizxAiTools.copyToClipboard`).
-6. **Instalar / Desinstalar en Copilot** (`fhizxAiTools.installItem` / `uninstallItem`): copia/elimina el archivo en `~/.vscode/github-copilot/<categoría>/` con conversión a `.prompt.md` y registra la carpeta en `chat.promptFilesLocations`.
-7. **Token Counter**: con el editor activo, muestra en tiempo real tokens exactos (js-tiktoken, `cl100k_base`), caracteres, palabras, líneas y costo estimado por 4 modelos.
-8. **Chat Participant `usar <nombre>`**: `@fhizx-ai-tools usar <x>` → búsqueda recursiva en prompts/agents/skills/context → respuesta markdown con el contenido del recurso.
+- **UC-01 Configurar ruta global**: el usuario selecciona una carpeta con un dialog (`showOpenDialog`), se guarda en `fhizxAiTools.globalPath` (Global), se crea la estructura `prompts/agents/skills/context/notes` (`ensureGlobalStructure`) y se refrescan todas las vistas.
+- **UC-02 Explorar recursos**: cada vista lee de forma sincrona el directorio de su categoria (`readdirSync`), filtra por extension valida, calcula estado de instalacion y devuelve items ordenados (carpetas primero, luego alfabetico).
+- **UC-03 Crear archivo con boilerplate**: se pide el nombre (`showInputBox`), se valida que no exista, se normaliza extension y prefijo, se escribe la plantilla (`getBoilerplateContent`) y se abre el archivo en el editor.
+- **UC-04 Crear carpeta**: se pide el nombre, se valida existencia y se ejecuta `mkdirSync` recursivo.
+- **UC-05 Abrir archivo**: `showTextDocument` con el URI del recurso.
+- **UC-06 Renombrar elemento**: se pide el nuevo nombre preservando la extension, se valida colision y se ejecuta `renameSync`.
+- **UC-07 Eliminar elemento**: confirmacion modal, luego `rmSync` (recursivo si es carpeta) o `unlinkSync`.
+- **UC-08 Copiar al portapapeles**: `safeReadFile` + `env.clipboard.writeText`.
+- **UC-09 Enviar al chat**: se abre el chat de Copilot con la query `Usa el siguiente recurso (<nombre>):\n\n<contenido>`; si el chat no soporta query, fallback a portapapeles.
+- **UC-10 Instalar en Copilot**: copia el recurso a `~/.vscode/github-copilot/<categoria>/` con nombre normalizado a `.prompt.md` y registra el directorio en `chat.promptFilesLocations`.
+- **UC-11 Desinstalar de Copilot**: elimina el archivo del directorio Copilot.
+- **UC-12 Alternar instalacion (toggle)**: desde un nodo concreto o desde la vista Configurations con un QuickPick que lista todos los recursos instalables y su estado.
+- **UC-13 Chat participant `usar <nombre>`**: busqueda recursiva por nombre (con tolerancia a extension) en las cuatro categorias Copilot, lectura segura y renderizado en Markdown.
+- **UC-14 Chat participant `listar [filtro]`**: listado por categoria de los archivos de primer nivel que coincidan con el filtro.
+- **UC-15 Token Counter**: estadisticas del archivo activo (tokens exactos con `cl100k_base`, caracteres, palabras, lineas y costo estimado por cuatro modelos).
+- **UC-16 Abrir ruta global en el sistema**: `revealFileInOS` (crea la ruta si no existe).
+- **UC-17 Buscar actualizaciones**: consulta la version publicada en Marketplace y ofrece abrir la pagina de la extension.
 
-### 🔀 Casos de Uso Secundarios y Alternativos
+### Casos de Uso Secundarios y Alternativos
 
-- **Cancelación de creación/renombrado**: si el usuario cancela el `InputBox`, el flujo termina sin efectos.
-- **Nombre duplicado**: creación o renombrado aborta con `showErrorMessage` si ya existe.
-- **Ruta global no configurada**: creación de recursos y chat participant muestran advertencia/instrucción en vez de operar.
-- **Chat sin soporte de query**: `sendToChat` falla → copia al portapapeles + abre el chat + notifica.
-- **Instalación de extensiones alternativas**: `.md` y `.instructions.md` se convierten a `.prompt.md` antes de instalar (`getTargetFileName`).
-- **Activar sin ruta configurada**: las vistas devuelven listas vacías; `ensureCopilotPromptConfig` registra carpetas de Copilot existentes en silencio.
-- **Token counter sin archivo activo**: muestra ítem informativo "Sin archivo activo"; si `tiktoken` falla, estima tokens como `caracteres/4`.
-- **Eliminación de recurso**: confirmación modal obligatoria; si se cancela, no se elimina nada.
+- **Onboarding**: si no hay ruta global al activarse, se muestra un mensaje de bienvenida con accion directa a `setGlobalPath`.
+- **Auto-registro de prompt files**: al activarse, la extension registra en `chat.promptFilesLocations` los directorios de categoria ya existentes en `~/.vscode/github-copilot/`.
+- **QuickPick de instalacion global**: `toggleInstall` sin nodo actua como selector de recursos en toda la ruta global.
+- **Creacion contextual dentro de carpetas**: `createFileContext` / `createFolderContext` crean recursos dentro de la carpeta seleccionada, redirigiendo la categoria segun la ruta real (`getCategoryFromPath`).
+- **Fallback de tokens**: si `js-tiktoken` falla, se estima `ceil(caracteres / 4)`.
+- **Fallback de chat**: si `workbench.action.chat.open` no acepta query, se copia al portapapeles y se abre el chat vacio.
+- **Errores de lectura silenciosos**: `safeReadFile` devuelve cadena vacia ante errores de lectura.
 
-### 🔒 Precondiciones y Postcondiciones
+### Precondiciones y Postcondiciones
 
 | Caso de Uso | Precondiciones | Postcondiciones |
 | :--- | :--- | :--- |
-| Configurar Ruta Global | VS Code corriendo; extensión activa | `fhizxAiTools.globalPath` persistido a nivel Global; 5 carpetas de categoría creadas; vistas refrescadas |
-| Crear archivo | Ruta global configurada; nombre no duplicado | Archivo `{prefijo}{nombre}.prompt.md` (o `.md` para notes) creado con boilerplate; abierto en el editor |
-| Instalar en Copilot | Recurso tipo archivo (no carpeta); no instalado aún | Archivo copiado a `~/.vscode/github-copilot/<categoría>/` como `.prompt.md`; carpeta registrada en `chat.promptFilesLocations`; vista refrescada (icono ✅) |
-| Chat participant | Ruta global configurada; recurso existente | Respuesta markdown con contenido del recurso; sin cambios en disco |
-| Token counter | Editor con archivo abierto | Estadísticas actualizadas en la vista (reactivo a cambios de documento) |
+| UC-01 (Configurar ruta) | Ninguna. | `fhizxAiTools.globalPath` persistida en Global; estructura de 5 carpetas creada; vistas refrescadas. |
+| UC-02 (Explorar) | Ruta global configurada. | Arbol renderizado con estado de instalacion por archivo. |
+| UC-03/04 (Crear) | Ruta global configurada; nombre no existente. | Archivo/carpeta creados en la categoria; vistas refrescadas; archivo abierto en editor. |
+| UC-06 (Renombrar) | Elemento seleccionado; nuevo nombre sin colision. | Elemento renombrado en disco; vistas refrescadas. |
+| UC-07 (Eliminar) | Elemento seleccionado; confirmacion del usuario. | Elemento borrado del disco; vistas refrescadas. |
+| UC-10/11 (Instalar/Desinstalar) | Archivo valido en categoria Copilot. | Archivo presente/ausente en `~/.vscode/github-copilot/<cat>/`; config `chat.promptFilesLocations` registrada; vistas refrescadas. |
+| UC-13 (usar) | Ruta global configurada; recurso existente. | Contenido del recurso mostrado en el chat (o mensaje de no encontrado). |
+| UC-14 (listar) | Ruta global configurada. | Listado Markdown por categoria en el chat. |
+| UC-15 (Token counter) | Archivo activo en el editor. | Estadisticas mostradas en la vista; se actualizan con cada cambio o cambio de editor activo. |
 
 ---
 
 ## 3. Arquitectura y Flujo de Datos
 
-### 🏗️ Patrón de Arquitectura
-Extensión de VS Code **monolítica y modular por capas**, estilo **Provider-Service**:
+### Patron de Arquitectura
 
-- **Capa de Presentación (Providers)**: `TreeDataProvider`s que alimentan las vistas de la barra lateral (`WorkspaceTreeDataProvider`, `TokenCounterTreeDataProvider`, `ConfigurationTreeDataProvider`).
-- **Capa de Servicios (Dominio)**: lógica de negocio sobre el sistema de archivos y configuración (`FileManagerService`, `InstallationService`) y la integración con chat (`chatParticipantService`).
-- **Capa de Modelos**: envoltorios de `vscode.TreeItem` (`WorkspaceItem`, `ConfigurationItem`, `TokenStatItem`).
-- **Capa de Presentación/Orquestación**: `extension.ts` (composición del grafo de dependencias) y `commandSubscriptions.ts` (registro de comandos).
-- **Config centralizada**: `constants/index.ts` evita literales repetidos (IDs, comandos, rutas, precios, íconos).
+La extension sigue un patron **por capas con inyeccion de dependencias por constructor**, orientado a la API de extensiones de VS Code:
 
-No es Clean Architecture estricta ni BLoC/MVVM: es el patrón canónico de extensiones VS Code (TreeDataProvider + EventEmitter + command registration), con una separación de responsabilidades pragmática.
+- **Capa de Presentacion (UI)**: `TreeDataProvider` (`WorkspaceTreeDataProvider`, `ConfigurationTreeDataProvider`, `TokenCounterTreeDataProvider`) y modelos `TreeItem` (`WorkspaceItem`, `ConfigurationItem`, `TokenStatItem`).
+- **Capa de Aplicacion / Orquestacion**: `extension.ts` (composition root), `commandSubscriptions.ts` (registro de comandos) y `chatParticipantService.ts`.
+- **Capa de Servicios de Dominio**: `FileManagerService` (CRUD de recursos, boilerplates, busqueda) e `InstallationService` (integración con Copilot).
+- **Capa de Infraestructura / Utilidades**: `fsUtils.ts` (FS puro, testable) y `resourceUtils.ts` (acoplado a la API de VS Code).
+- **Capa de Configuracion / Constantes**: `src/constants/index.ts` centraliza IDs de vistas, comandos, prefijos, extensiones, iconos, precios de modelos y rutas.
 
-```mermaid
-flowchart TD
-    subgraph UI["VS Code UI"]
-        V[Views<br/>Configurations · Prompts · Agents · Skills · Context · Notes · Token Counter]
-        M[Menús contextuales<br/>view/title · view/item/context · editor/context]
-        CMD[Command Palette<br/>fhizxAiTools.*]
-        CHAT[Chat Copilot<br/>@fhizx-ai-tools]
-    end
+No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**: la logica pura (FS) esta aislada en `fsUtils` (sin dependencias de VS Code) y el resto se comunica por contratos tipados (`CategoryProvider`, `FileManagerProviders`, `CategoryType`).
 
-    subgraph CORE["Extensión (out/extension.js)"]
-        ACT["extension.ts<br/>(activate · composición)"]
-        PROV["Providers<br/>TreeDataProvider"]
-        SUBS["commandSubscriptions.ts"]
-        SRV["Servicios<br/>FileManagerService · InstallationService · chatParticipantService"]
-        MOD["Modelos<br/>WorkspaceItem · ConfigurationItem · TokenStatItem"]
-        CONST["constants/index.ts"]
-    end
+### Flujo de la Informacion
 
-    subgraph EXT["Externo"]
-        FS[(Sistema de archivos<br/>Espacio global + ~/.vscode/github-copilot)]
-        VSCCFG[("Config VS Code<br/>fhizxAiTools.globalPath<br/>chat.promptFilesLocations")]
-        COP["GitHub Copilot<br/>(prompt files + chat participant)"]
-    end
+**Flujo lectura (UI -> disco)**:
 
-    V --> PROV
-    M --> CMD
-    CMD --> SUBS
-    CHAT --> SRV
-    SUBS --> SRV
-    PROV --> SRV
-    PROV --> MOD
-    PROV --> CONST
-    SRV --> CONST
-    ACT --> PROV & SUBS & SRV
-    SRV --> FS
-    SRV --> VSCCFG
-    SRV --> COP
-```
+1. VS Code invoca `getChildren()` del provider de la vista.
+2. El provider lee `fhizxAiTools.globalPath` de la configuracion y resuelve `path.join(globalPath, category)`.
+3. `fs.readdirSync` sobre el directorio; se filtran archivos por extension valida (`validateExtension`).
+4. `InstallationService.isInstalled` consulta si existe el equivalente `.prompt.md` en el directorio Copilot.
+5. Se construyen `WorkspaceItem` (iconos de estado verde/rojo) y se devuelven ordenados.
 
-### 🔄 Flujo de la Información
+**Flujo escritura (accion del usuario -> disco -> UI)**:
 
-**Escritura (crear recurso):**
-1. Usuario pulsa botón/menú → VS Code ejecuta el comando `fhizxAiTools.create<X>File` (registrado dinámicamente).
-2. `commandSubscriptions` delega en `FileManagerService.createNewFile(category, refreshAll)`.
-3. El servicio resuelve la ruta base (`getGlobalCategoryPath()`), pide el nombre con `showInputBox`, aplica prefijo + extensión y escribe el archivo con `fs.writeFileSync` (contenido boilerplate).
-4. `refreshAll()` dispara `_onDidChangeTreeData.fire()` en todos los providers → VS Code vuelve a llamar `getChildren()` → la vista refleja el cambio.
+1. Comando invocado desde menu, boton de titulo o chat.
+2. `FileManagerService` (o `InstallationService`) muta el disco de forma sincrona.
+3. Se invoca `refreshAll()` (o `provider.refresh()`), que dispara `_onDidChangeTreeData.fire()`.
+4. VS Code re-llama `getChildren()` y la UI se actualiza.
 
-**Lectura (token counter):**
-1. Eventos de VS Code (`onDidChangeActiveTextEditor`, `onDidChangeTextDocument`) → `refresh()` del provider.
-2. `getChildren()` lee `editor.document.getText()`, calcula tokens con js-tiktoken y costos con precios de `constants`, y devuelve ítems `TokenStatItem`.
+**Flujo instalacion en Copilot**:
 
-**Integración (instalar en Copilot):**
-1. Comando `installItem` → `InstallationService.installItem(node, category)`.
-2. Copia el archivo a `~/.vscode/github-copilot/<categoría>/` (conversión a `.prompt.md`).
-3. `updateCopilotConfig` registra la carpeta en `chat.promptFilesLocations` (Global).
-4. `refreshAll()` → `getChildren()` consulta `InstallationService.isInstalled()` → icono ✅/❌.
+1. `InstallationService.installItem` copia el recurso con nombre normalizado (`toPromptFileName`) a `~/.vscode/github-copilot/<cat>/`.
+2. `updateCopilotConfig` agrega el directorio a `chat.promptFilesLocations` (Global) si falta.
+3. Al activarse, `ensureCopilotPromptConfig` hace lo mismo con directorios ya existentes.
+4. La vista refleja el nuevo estado via `refreshAll`.
 
-### 🎛️ Manejo de Estado
-- **Reactividad de vistas**: `EventEmitter` privado `_onDidChangeTreeData` + `refresh()` en cada provider (patrón oficial de TreeDataProvider).
-- **Estado persistente**: configuración de VS Code (target `Global`): `fhizxAiTools.globalPath` (ruta) y `chat.promptFilesLocations` (carpetas Copilot).
-- **Derivado del sistema de archivos**: el estado de "instalado" se calcula en cada render (`isInstalled()`), no se cachea.
-- **Eventos externos**: `ConfigurationTreeDataProvider` se auto-refresca con `onDidChangeConfiguration` (namespace `fhizxAiTools`); el token counter escucha cambios de editor/documento.
+**Flujo chat participant**:
+
+1. El usuario escribe `@fhizx-ai-tools usar <nombre>` o `@fhizx-ai-tools listar`.
+2. `chatParticipantService` parsea el prompt con expresiones regulares.
+3. `usar` delega en `fileManager.findFileRecursive` (busqueda recursiva con tolerancia de extension) y `safeReadFile`.
+4. `listar` lee el primer nivel de cada categoria Copilot y renderiza Markdown.
+5. La respuesta se envia con `response.markdown(...)`.
+
+### Manejo de Estado
+
+- **Sin estado reactivo global**: no hay store ni estado compartido; la "fuente de verdad" es el sistema de archivos.
+- **Refresco basado en eventos**: los providers exponen `onDidChangeTreeData` via `EventEmitter`; los comandos llaman `refreshAll()` despues de mutar disco.
+- **Reaccion a configuracion**: `onDidChangeConfiguration` (namespace `fhizxAiTools`) refresca la vista de configuraciones y recrea la estructura global si cambio la ruta.
+- **Reaccion al editor**: `onDidChangeActiveTextEditor` y `onDidChangeTextDocument` refrescan el token counter cuando el documento activo cambia o se edita.
 
 ---
 
 ## 4. Componentes Clave y Mapa de Responsabilidades
 
-### 🧩 Módulos / Clases Principales (SRP)
+### Modulos / Clases Principales
 
-| Componente | Archivo | Responsabilidad única |
+| Componente | Archivo | Responsabilidad (SRP) |
 | :--- | :--- | :--- |
-| `activate()` | `src/extension.ts` | Composición del grafo: instancia providers, servicios y comandos; verificación inicial de config; `ensureCopilotPromptConfig` |
-| `WorkspaceTreeDataProvider` | `src/providers/workspaceTreeDataProvider.ts` | Render del árbol de archivos/carpetas de una categoría; validación de extensiones; estado instalado |
-| `TokenCounterTreeDataProvider` | `src/providers/tokenCounterProvider.ts` | Estadísticas y costos del archivo activo |
-| `ConfigurationTreeDataProvider` | `src/providers/configurationTreeDataProvider.ts` | Vista "Configurations" (acciones y estado de la ruta global) |
-| `FileManagerService` | `src/services/fileManagerService.ts` | CRUD de recursos: crear archivos/carpetas, boilerplates, búsqueda recursiva, resolución de categoría |
-| `InstallationService` | `src/services/installationService.ts` | Instalar/desinstalar en Copilot y actualizar `chat.promptFilesLocations` (métodos estáticos) |
-| `registerChatParticipant` | `src/services/chatParticipantService.ts` | Registro del participante `@fhizx-ai-tools` y lógica del comando `usar <nombre>` |
-| `registerCommands` | `src/subscriptions/commandSubscriptions.ts` | Registro de todos los comandos `fhizxAiTools.*` (incl. generadores dinámicos por categoría) |
-| `WorkspaceItem` | `src/models/workspaceItemModel.ts` | TreeItem de archivo/carpeta con contextValue, icono de estado y comando de apertura |
-| `ConfigurationItem` | `src/models/configurationItemModel.ts` | TreeItem de la vista de configuración |
-| `TokenStatItem` | `src/models/tokenStatItemModel.ts` | TreeItem de estadística del token counter |
-| Constantes | `src/constants/index.ts` | Fuente única de IDs, comandos, rutas, prefijos, extensiones, íconos, precios y tipos derivados (`CategoryType`) |
+| `activate()` | `src/extension.ts` | Composition root: construye providers y servicios, registra vistas, chat participant, comandos y manejo de configuracion inicial. |
+| `WorkspaceTreeDataProvider` | `src/providers/workspaceTreeDataProvider.ts` | Renderiza el arbol de una categoria (`prompts`, `agents`, `skills`, `context`, `notes`), filtra extensiones, calcula estado de instalacion y resuelve la ruta de la categoria. |
+| `ConfigurationTreeDataProvider` | `src/providers/configurationTreeDataProvider.ts` | Renderiza el centro de control: acciones, estado de la ruta global y acceso a comandos de configuracion. |
+| `TokenCounterTreeDataProvider` | `src/providers/tokenCounterProvider.ts` | Calcula tokens, estadisticas del documento activo y costos estimados por modelo. |
+| `WorkspaceItem` | `src/models/workspaceItemModel.ts` | Modelo TreeItem de archivo/carpeta con estado de instalacion, `contextValue` para menus y comando de apertura. |
+| `ConfigurationItem` | `src/models/configurationItemModel.ts` | Modelo TreeItem de la vista Configurations; `contextValue` derivado de `kind` (`config_info`, `config_status`, `config_action`). |
+| `TokenStatItem` | `src/models/tokenStatItemModel.ts` | Modelo TreeItem de estadistica del token counter. |
+| `FileManagerService` | `src/services/fileManagerService.ts` | CRUD de archivos/carpetas, generacion de boilerplates por categoria, busqueda recursiva y resolucion de categoria desde una ruta. |
+| `InstallationService` | `src/services/installationService.ts` | Instalacion/desinstalacion/toggle de recursos en Copilot y registro en `chat.promptFilesLocations` (metodos estaticos). |
+| `registerChatParticipant` | `src/services/chatParticipantService.ts` | Registra el chat participant `@fhizx-ai-tools` con los subcomandos `usar` y `listar`. |
+| `registerCommands` | `src/subscriptions/commandSubscriptions.ts` | Registra todos los comandos de la extension y la consulta de version en Marketplace. |
+| `fsUtils` | `src/utils/fsUtils.ts` | Utilidades puras de FS sin dependencias de VS Code: `fileExists`, `isDirectory`, `safeReadFile`, `deletePath`, `toPromptFileName`. |
+| `resourceUtils` | `src/utils/resourceUtils.ts` | Utilidades con API de VS Code: `getGlobalPathConfig`, `ensureGlobalStructure`, `resolveResourceFilePath`, `notifyFsError`. |
+| `constants` | `src/constants/index.ts` | Centraliza constantes, tipos derivados (`CategoryType`) y helpers (`capitalizeCategory`). |
 
-### 🔗 Dependencias Críticas
+### Dependencias Criticas
 
-| Dependencia | Versión | Rol |
+| Dependencia | Uso | Criticidad |
 | :--- | :--- | :--- |
-| **VS Code API** (`@types/vscode`) | ^1.85.0 | Contratos fundamentales: `TreeDataProvider`, `TreeItem`, comandos, menús, config, chat API (`createChatParticipant`), `revealFileInOS` (no usado aún) |
-| **`js-tiktoken`** | ^1.0.12 | Encoder `cl100k_base` para el conteo exacto de tokens |
-| **Node core** (`fs`, `path`, `os`) | — | Acceso al sistema de archivos y rutas de home (`COPILOT_BASE_DIR`) |
-| **TypeScript** | ^5.x | Compilación (`tsc -p ./` → `out/`) |
-| **vsce** (tooling) | externo | Empaquetado `.vsix` en `src/versions/` |
-
-> ⚠️ La dependencia de runtime es únicamente `js-tiktoken`; el resto es API de VS Code y Node core.
-
----
-
-## 5. Puntos de Extensión (Extension Points)
-
-### 🧷 Puntos de Acople (dónde insertar código nuevo)
-
-1. **Nueva categoría de recurso** (ej. `snippets`): tocar **5 lugares coordinados**:
-   - `src/constants/index.ts`: añadir a `CATEGORIES` (y `COPILOT_CATEGORIES` si aplica a Copilot) + `FILE_PREFIXES`.
-   - `package.json`: nueva entrada en `views.fhizx-ai-tools-container`, comandos `create<X>File/Folder` y menús `view/title`.
-   - `src/extension.ts`: nueva instancia `new workspaceTreeDataProvider("<cat>")` + registro de TreeDataProvider + `refreshAll()`.
-   - `src/services/fileManagerService.ts`: caso en `getBoilerplateContent`.
-   - `src/suscriptions/commandSubscriptions.ts`: la generación dinámica de comandos ya cubre automáticamente cualquier categoría de `CATEGORIES` (flatMap sobre `create${Capitalize}File/Folder`).
-2. **Nuevo comando**: añadir clave en `COMMANDS` (constants) → registrar en `registerCommands` → declarar en `contributes.commands` + menús de `package.json`.
-3. **Nuevo provider/vista**: clase `TreeDataProvider` en `src/providers/` → modelo en `src/models/` → registro en `extension.ts` → ID en `VIEW_IDS` → declaración en `package.json`.
-4. **Nuevo modelo de costo en Token Counter**: `MODEL_PRICES` + bloque en `getChildren()` de `tokenCounterProvider.ts`.
-5. **Nueva acción de chat**: ampliar el parser de `promptQuery` en `chatParticipantService.ts` (hoy solo soporta `usar <nombre>`).
-
-### 📜 Contratos / Interfaces (implícitos)
-
-- **Provider**: implementar `vscode.TreeDataProvider<T>` con `getTreeItem`, `getChildren` y `EventEmitter.onDidChangeTreeData` + método `refresh()`.
-- **Modelo**: extender `vscode.TreeItem` y fijar `contextValue` (strings que enlazan con los `when` de los menús: `folder`, `file_installed`, `file_uninstalled`, `config_*`).
-- **Servicios**: `FileManagerService` es instanciable (recibe providers); `InstallationService` es **estático** (`installItem`, `uninstallItem`, `isInstalled`, `getCopilotGlobalPath`).
-- **Comandos dinámicos**: convención `fhizxAiTools.create${capitalize(category)}File|Folder` — no registrar a mano, sale del `flatMap`.
-- **Tipos**: usar `CategoryType` desde `constants`; **no redefinir** el tipo en servicios/providers.
+| **VS Code API** (`vscode`) | Trees, comandos, configuracion, chat participant, dialogs, clipboard, notificaciones. | Alta; sin ella no hay extension. |
+| **`js-tiktoken`** | Encoder `cl100k_base` para conteo exacto de tokens. | Media; hay fallback por caracteres. |
+| **Node.js FS** (`fs`, `path`, `os`) | Operaciones sincronas sobre el disco y resolucion de rutas. | Alta. |
+| **Node `https`** | Consulta a la API publica `extensionquery` de Marketplace para `checkForUpdates`. | Baja; falla silenciosamente. |
+| **Configuracion `chat.promptFilesLocations`** | Declara los directorios de prompt files para Copilot. | Alta para la integracion con Copilot. |
+| **Directorio `~/.vscode/github-copilot/`** | Destino de instalacion de recursos. | Alta para la integracion con Copilot. |
+| **Marketplace (publisher `undefined_publisher`)** | Verificacion de version; la extension no esta publicada oficialmente. | Baja/Media. |
 
 ---
 
-## 6. Guía de Implementación Futura (Checklist)
+## 5. Puntos de Extension (Extension Points)
 
-### 📝 Paso a Paso (añadir una sub-feature similar — ej. nueva categoría)
+### Puntos de Acople
 
-1. **Definir la categoría** en `src/constants/index.ts` (`CATEGORIES`, `COPILOT_CATEGORIES`, `FILE_PREFIXES`).
-2. **Declarar la vista** y comandos en `package.json` (`contributes.views`, `contributes.commands`, `menus.view/title`).
-3. **Instanciar y registrar** el provider en `src/extension.ts` (crear provider + `registerTreeDataProvider` + agregar a `refreshAll()`).
-4. **Añadir boilerplate** en `FileManagerService.getBoilerplateContent()`.
-5. **Verificar menús contextuales** (`view/item/context` + submenu `fhizxAiTools.itemMenu`) con los `contextValue` correctos.
-6. **Compilar** (`npm run compile`) y **probar con F5** (`.vscode/launch.json` ya existe).
-7. **Empaquetar e instalar** para pruebas reales: `vsce package --out "src/versions/fhizx-ai-tools-manager-<version>.vsix"` y `code --install-extension <vsix> --force` (binario en `/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code`).
-
-### 🧹 Convenciones y Estándares (preservar)
-
-- **Naming de archivos**: prefijos `p-`/`a-`/`s-`/`c-`; extensión `.prompt.md` (menos `notes` → `.md`).
-- **Naming de código**: comandos `fhizxAiTools.<verbo>[Objeto]`; vistas `fhizxAiTools.<categoría>`; clases PascalCase (`WorkspaceTreeDataProvider`).
-- **Estructura**: `providers/`, `services/`, `models/`, `subscriptions/`, `utils/`, `constants/`, `versions/`.
-- **Centralización**: toda constante repetida vive en `src/constants/index.ts` (nunca literales sueltos).
-- **UI en español**: textos de comandos, mensajes y menús en español (títulos de vistas con emoji).
-- **Comentarios en español** y marca de sección tipo `// 1. ...` en `extension.ts`.
-
-### 🛡️ Manejo de Errores (contratos obligatorios)
-
-- **Feedback al usuario**: `showWarningMessage` (acciones inválidas, ruta no configurada), `showErrorMessage` (duplicados), `showInformationMessage` (éxitos).
-- **Tolerancia a fallos de Copilot**: `try/catch` silencioso con `console.warn` al actualizar `chat.promptFilesLocations` (puede no existir en versiones viejas).
-- **Fallback de conteo**: si `tiktoken` lanza, estimar `tokens ≈ caracteres / 4`.
-- **Fallback de chat**: si `workbench.action.chat.open` con query falla → portapapeles.
-- **Providers resilientes**: `getChildren()` envuelto en `try/catch` que devuelve `[]` ante errores de FS.
-
----
-
-## 7. Riesgos, Casos Borde y Deuda Técnica
-
-### 🧪 Casos Borde (Edge Cases) a probar
-
-| Escenario | Comportamiento actual / riesgo |
+| Que se quiere extender | Donde insertar codigo |
 | :--- | :--- |
-| Ruta global vacía o con espacios | `getGlobalCategoryPath()` devuelve `undefined` → vistas vacías; al crear, advertencia. No se hace trim en la creación (sí en validación de config). |
-| Archivo/carpeta con nombre duplicado | Bloqueado con mensaje de error (bien). |
-| Renombrar sin escribir extensión | Se agrega automáticamente la extensión original (`parsedPath.ext`). Si el usuario incluye la extensión, no se duplica. ⚠️ No valida prefijos ni categoría. |
-| Eliminar carpeta con contenido | `fs.rmSync(recursive: true, force: true)` — destrucción total con confirmación modal. |
-| Categoría `notes` | Extensiones `.md` (excluye `.prompt.md`); sin prefijo; sin instalación en Copilot (`when` de menús excluye notes). |
-| Archivos de solo lectura / permisos | `fs.writeFileSync` / `renameSync` lanzarán excepciones **no capturadas** en comandos (pueden romper el host). |
-| Archivo gigante en token counter | `encoder.encode` en memoria de forma síncrona en cada cambio de documento — puede congelar el editor con archivos muy grandes. |
-| Rutas con caracteres especiales / espacios | `path.join` y `fsPath` los manejan; pero los prefijos de búsqueda del chat (`findFileRecursive`) comparan nombres exactos (case-sensitive) — `usar Mi-Archivo` no encontrará `p-mi-archivo`. |
-| Carpeta de Copilot inexistente | `installItem` la crea con `mkdirSync(recursive)`. |
-| VS Code sin soporte de `chat.promptFilesLocations` | Se ignora en silencio (`console.warn`). |
+| **Nueva categoria de recurso** | 1) `src/constants/index.ts`: agregar a `CATEGORIES`, `FILE_PREFIXES`, `COPILOT_CATEGORIES` si es instalable y `VIEW_IDS`. 2) `src/extension.ts`: instanciar `WorkspaceTreeDataProvider`, registrarla con `registerTreeDataProvider` y agregarla a `providers` y `refreshAll`. 3) `src/services/fileManagerService.ts`: `getBoilerplateContent` y `getCategoryFromPath` (CATEGORIES ya es dinamico). 4) `package.json`: nueva vista en `contributes.views`, botones `view/title` y menús `view/item/context`. |
+| **Nuevo comando** | 1) `src/constants/index.ts`: clave en `COMMANDS`. 2) `src/subscriptions/commandSubscriptions.ts`: `registerCommand`. 3) `package.json`: `contributes.commands` y referencias en `menus`. |
+| **Nueva vista (contenedor nuevo)** | 1) `src/constants/index.ts`: `VIEW_IDS`. 2) Crear provider en `src/providers/`. 3) `src/extension.ts`: instanciar y registrar. 4) `package.json`: vista y menus. |
+| **Nuevo subcomando del chat participant** | `src/services/chatParticipantService.ts`: agregar rama de regex antes del fallback de ayuda. |
+| **Nuevo modelo de precio / token** | `src/constants/index.ts`: `MODEL_PRICES`; `src/providers/tokenCounterProvider.ts`: calcular y agregar `TokenStatItem`. |
+| **Nuevo boilerplate** | `src/services/fileManagerService.ts`: `getBoilerplateContent` (switch por categoria). |
+| **Nueva accion en Configurations** | `src/providers/configurationTreeDataProvider.ts`: agregar `ConfigurationItem` con `kind: info` y comando; ajustar menus en `package.json` si requiere `contextValue` nuevo. |
+| **Nuevo origen de "instalar"** | `src/services/installationService.ts` (logica) + `commandSubscriptions.ts` (disparadores). |
 
-### ⚠️ Atención Especial (rendimiento, seguridad, sincronización)
+### Contratos / Interfaces
 
-- **Rendimiento**: todo el acceso a FS es **síncrono** (`readdirSync`, `readFileSync`, `copyFileSync`) y se ejecuta en `getChildren()` (llamado por VS Code en cada render y en cada `refresh()`). Con espacios grandes, la vista puede degradarse. La búsqueda recursiva del chat también es síncrona.
-- **Seguridad**: no hay validación de que la ruta global no sea un directorio sensible (ej. `/`); el chat participant inyecta contenido de archivos locales en el chat tal cual (riesgo de prompt injection si los recursos vienen de fuentes no confiables).
-- **Sincronización con Copilot**: al instalar vía CLI mientras VS Code está abierto, **requiere recargar la ventana (Cmd+R)** para que Copilot detecte los nuevos prompt files. La extensión registra `chat.promptFilesLocations` al activarse, pero no vigila cambios posteriores de `~/.vscode/github-copilot/`.
-- **Persistencia del layout**: la vista puede "desaparecer" por `views.customizations` en `state.vscdb` → fix con `Developer: Reset View Locations`.
-
-### 🩹 Deuda Técnica Identificada (hallazgos del análisis)
-
-> ✅ **Estado (2026-08-03):** los hallazgos 1-11 fueron **resueltos**; el hallazgo 12 se mitigó parcialmente (se añadió el comando `listar` y `fhizxAiTools.list`).
-> Cambios aplicados: comandos `toggleInstall`/`openGlobalPath` registrados; `ConfigurationItem.contextValue` derivado de `kind`; icono del participante apuntando a `assets/logo.png`; clase `WorkspaceTreeDataProvider` y carpeta `subscriptions/`; utilidades `src/utils/fsUtils.ts` + `src/utils/resourceUtils.ts`; `FileManagerService` tipado sin `any`; `getChildren()` sin side-effect; `checkForUpdates` consulta el Marketplace; errores de FS capturados con `notifyFsError`; suite de tests vitest (`npm test`).
-
-> ✅ **Estado (2026-08-03):** los hallazgos 1-11 fueron **resueltos** (ver commit de resolución); el hallazgo 12 se mitigó parcialmente (se añadió `listar` + comando `fhizxAiTools.list`).
-> Cambios aplicados: comandos `toggleInstall`/`openGlobalPath` registrados; `ConfigurationItem.contextValue` derivado de `kind`; icono del participante apuntando a `assets/logo.png`; clase `WorkspaceTreeDataProvider` y carpeta `subscriptions/`; utilidades `src/utils/fsUtils.ts` + `src/utils/resourceUtils.ts`; `FileManagerService` tipado sin `any`; `getChildren()` sin side-effect; `checkForUpdates` consulta el Marketplace; errores de FS capturados con `notifyFsError`; suite de tests vitest (`npm test`).
-
-1. **🔴 Comandos declarados pero NO registrados**: `fhizxAiTools.toggleInstall` y `fhizxAiTools.openGlobalPath` existen en `constants/index.ts` y `package.json` (menús inline de la vista Configurations), pero **no están registrados en `registerCommands`**. Al hacer clic, VS Code lanza "command not found". Falta implementación (el `toggleInstall` debería usar QuickPick instalar/desinstalar; `openGlobalPath` debería usar `revealFileInOS`).
-2. **🔴 `contextValue` roto en Configurations**: `ConfigurationItem` **siempre** fija `this.contextValue = "config_info"` e ignora el parámetro `kind`. Los menús de `package.json` esperan `config_status` y `config_action` (`view/item/context`), por lo que los botones inline **nunca se renderizan**. El tipo `ConfigurationItemKind` está definido pero no se usa.
-3. **🟠 Icono del chat participant inexistente**: `chatParticipantService.ts` referencia `media/icon.svg`, pero **no existe la carpeta `media/`** en el repo (solo `assets/`). El icono no se muestra (no rompe, pero el recurso apunta a nada).
-4. **🟠 Naming inconsistente**: clase `workspaceTreeDataProvider` en minúscula (viola PascalCase del resto); carpeta `suscriptions/` (typo de "subscriptions").
-5. **🟠 Tipado `any`**: `FileManagerService` recibe `Record<CategoryType | "tokenCounterProvider", any>` y lo usa para invocar `getGlobalCategoryPath()` — sin verificación de tipos.
-6. **🟠 Lógica duplicada**: la resolución de `filePath` (node vs Uri vs activeTextEditor) está repetida en `SEND_TO_CHAT` y `COPY_TO_CLIPBOARD` — extraer a helper.
-7. **🟠 Side-effect en getter**: `getChildren()` de `workspaceTreeDataProvider` ejecuta `fs.mkdirSync` si la ruta no existe (efecto de escritura dentro de una operación de lectura).
-8. **🟡 Stub**: `fhizxAiTools.checkForUpdates` solo muestra "se encuentra actualizado" — sin lógica real de versionado (aunque hay `src/versions/` con VSIX versionados).
-9. **🟡 Categoría por defecto engañosa**: `FileManagerService.getCategoryFromPath()` devuelve `"prompts"` como fallback si no matchea ninguna ruta — puede crear recursos en la categoría equivocada.
-10. **🟡 Errores de FS sin capturar**: `createNewFile`, `createNewFolder`, `renameItem`, `deleteItem` no envuelven las operaciones de FS en `try/catch`; un fallo de permisos o disco lleno propagaría la excepción al host de VS Code.
-11. **🟡 Sin tests**: no hay suite de pruebas (solo dependencias de dev de TypeScript). Los flujos de FS y naming (prefijos, conversión `.md` → `.prompt.md`, `findFileRecursive`) son candidatos ideales para unit tests.
-12. **🟡 Accesibilidad del chat participant**: solo responde al patrón `usar <nombre>` (regex `usar\s+(.+)`); el resto de comandos devuelve ayuda genérica. No hay búsqueda difusa ni sugerencias.
+- **`CategoryProvider`** (`fileManagerService.ts`): contrato minimo `getGlobalCategoryPath(): string | undefined`; usado por `FileManagerService` para resolver rutas de categoria.
+- **`FileManagerProviders`**: `Record<CategoryType, CategoryProvider>`; exige que todos los providers de categoria implementen el contrato.
+- **`CategoryType`**: union derivada de `CATEGORIES`; se importa desde `constants` y NO debe redefinirse en otros archivos.
+- **`vscode.TreeDataProvider<T>`**: implementado por los tres providers (`getTreeItem`, `getChildren`, `onDidChangeTreeData`, `refresh`).
+- **`contextValue` de los modelos**: `WorkspaceItem` usa `file_installed`, `file_uninstalled`, `folder`; `ConfigurationItem` usa `config_info`, `config_status`, `config_action`; `TokenStatItem` usa `tokenStat`. Los menus de `package.json` dependen de estos valores (cambiar uno rompe los menus).
+- **`WorkspaceItem` constructor**: firma fija `(label, resourceUri, collapsibleState, isFolder, category, isInstalled)`; los callers (providers, QuickPick de toggle) dependen de ella.
+- **`InstallationService`**: API estatica `getCopilotGlobalPath`, `isInstalled`, `installItem`, `uninstallItem`, `toggleItem`.
+- **`COMMANDS`**: todos los IDs de comando deben existir en `package.json` o VS Code no los resuelve.
 
 ---
 
-## 📌 Recomendaciones Prioritarias (antes de escalar)
+## 6. Guia de Implementacion Futura (Checklist)
 
-1. **Registrar `toggleInstall` y `openGlobalPath`** (deuda #1) y **corregir `contextValue`** según `kind` (`config_status` / `config_action`) — deuda #2 — para que la vista Configurations cumpla lo que promete el README.
-2. **Mover `media/icon.svg`** o apuntar `iconPath` a un recurso existente en `assets/`.
-3. **Refactorizar acceso síncrono a FS** de `getChildren()` (o al menos medir con espacios grandes).
-4. **Envolver operaciones de FS** de comandos de escritura en `try/catch` con `showErrorMessage`.
-5. **Extraer helper único** de resolución de `filePath` para `sendToChat`/`copyToClipboard`.
-6. **Añadir unit tests** para `InstallationService.getTargetFileName`, `FileManagerService.findFileRecursive` y prefijos (los bugs de naming/conversión son los más propensos a regresión).
+### Paso a Paso
+
+1. **Definir el alcance**: identificar si el cambio es nueva categoria, comando, vista, subcomando de chat o logica de instalacion.
+2. **Actualizar constantes primero**: agregar IDs, prefijos, extensiones o precios en `src/constants/index.ts` y exportar tipos derivados si aplica.
+3. **Implementar la logica pura**: si involucra FS, agregar funciones en `src/utils/fsUtils.ts` (sin dependencias de VS Code) para poder testearlas.
+4. **Agregar el servicio o provider**: extender `FileManagerService`, `InstallationService` o crear el nuevo provider en `src/providers/`.
+5. **Conectar el command**: registrar en `src/subscriptions/commandSubscriptions.ts` y declarar en `package.json` (`contributes.commands` + `menus`).
+6. **Registrar en el composition root**: instanciar y registrar en `src/extension.ts` (providers, `refreshAll`, suscripciones).
+7. **Extender la UI declarativa**: vistas, botones `view/title` y `view/item/context` en `package.json` con los `when` adecuados (`view == ...`, `viewItem == ...`).
+8. **Agregar tests**: en `test/*.test.ts` con vitest (patron Arrange/Act/Assert) para toda logica pura nueva.
+9. **Validar**: `npm run compile`, `npm test`, empaquetar con `vsce package --out src/versions/<nombre>-<version>.vsix` e instalar con la CLI completa de VS Code (la extension se prueba instalada, no con F5).
+10. **Actualizar README y version**: documentar nuevos comandos y subir `version` en `package.json`.
+
+### Convenciones y Estandares
+
+- **Naming de comandos**: prefijo `fhizxAiTools.`; verbos en infinitivo (`create`, `rename`, `delete`, `install`, `toggle`, `open`, `send`, `copy`).
+- **Comandos dinamicos**: `fhizxAiTools.create<Category>File|Folder` generados con `COMMAND_PREFIX` + `capitalizeCategory`; mantener el patron al agregar categorias.
+- **Constantes**: todo valor repetido vive en `src/constants/index.ts`; no duplicar strings magicos en services ni providers.
+- **Tipos derivados**: exportar tipos (`CategoryType`) desde `constants` y no redefinirlos.
+- **Estructura de carpetas**: `src/providers/` (UI), `src/services/` (dominio), `src/models/` (modelos), `src/subscriptions/` (comandos), `src/utils/` (utilidades), `src/constants/`, `test/`.
+- **Extension de archivos**: recursos instalables `.prompt.md`; notes `.md`; conversion con `toPromptFileName`.
+- **Prefijos de categoria**: `p-`, `a-`, `s-`, `c-` y sin prefijo para notes.
+- **Registro de proveedores**: declarar vistas y menus en `package.json`; los `contextValue` de los modelos son el contrato con los menus.
+- **Idioma**: mensajes de usuario en espanol; codigo y comentarios en ingles donde sea idiomático; tests con Given/When/Then en ingles.
+- **Tests**: vitest ^2 (vitest 4 no resuelve con `@types/node` 18); `npm test` = `vitest run`.
+
+### Manejo de Errores
+
+- **Contrato obligatorio**: operaciones FS mutantes (crear, renombrar, eliminar, abrir ruta, configurar) se envuelven en `try/catch` y usan `notifyFsError(accion, error)` (`resourceUtils.ts`) que loguea en consola y muestra `showErrorMessage`.
+- **Lecturas seguras**: `safeReadFile` nunca lanza; devuelve `""` y loguea.
+- **Predicados seguros**: `isDirectory` y `fileExists` no lanzan ante rutas inexistentes.
+- **Fallos no criticos**: la actualizacion de `chat.promptFilesLocations` y la consulta a Marketplace fallan silenciosamente (`console.warn` o `resolve(undefined)`).
+- **Precondiciones de UI**: antes de mutar, verificar ruta global configurada (`showWarningMessage` si falta) y existencia de destino.
+- **Validaciones de negocio**: no sobrescribir archivos/carpetas existentes; bloquear renombrado con colision; confirmacion modal antes de eliminar.
+- **Chat participant**: ante falta de ruta global o recurso inexistente se responde con mensaje Markdown en el propio chat (no excepciones).
+
+---
+
+## 7. Riesgos, Casos Borde y Deuda Tecnica
+
+### Casos Borde (Edge Cases)
+
+- **Ruta global vacia o con espacios**: `getGlobalPathConfig` y `getGlobalCategoryPath` truncan/descartan rutas en blanco; el onboarding se re-muestra al activar.
+- **Ruta global apuntando a un directorio inexistente**: las vistas devuelven listas vacias; `openGlobalPath` lo crea; `ensureGlobalStructure` lo reconstruye al activar o cambiar config.
+- **Nombre de archivo con extension ya incluida**: al crear, se limpia la extension duplicada antes de aplicar prefijo.
+- **Colision de nombres**: crear archivo/carpeta o renombrar con destino existente se bloquea con mensaje de error.
+- **Instalacion de carpetas**: `installItem`, `uninstallItem` y `toggleItem` ignoran carpetas (return temprano).
+- **Notes no instalable**: la categoria `notes` no aparece en `COPILOT_CATEGORIES`; los menus de instalacion excluyen la vista notes con `when`.
+- **Nombre con extensiones compuestas**: `toPromptFileName` maneja `.prompt.md`, `.instructions.md`, `.md` y sin extension.
+- **Búsqueda en chat por nombre parcial**: `findFileRecursive` tolera buscar sin extension; un nombre que exista como `.md` y como `.prompt.md` resuelve el primero encontrado (orden de `readdirSync`, no determinista por categoria).
+- **Archivos sin editor activo**: el token counter muestra un mensaje placeholder.
+- **Encoder de tokens fallido**: `js-tiktoken` puede lanzar con textos invalidos; se estima con caracteres/4.
+- **Vista oculta / layout corrupto**: VS Code persiste `viewLocations` en `state.vscdb`; si la vista no aparece, `Developer: Reset View Locations` corrige.
+- **Extension no publicada**: el publisher es `undefined_publisher`; `checkForUpdates` depende de esa identidad y de conectividad de red (timeout 8s).
+- **Chat sin soporte de query**: `sendToChat` cae a portapapeles + chat vacio.
+- **Multiples archivos con mismo nombre en subcarpetas**: `listar` solo muestra primer nivel; `usar` busca recursivo y toma el primero que encuentra.
+
+### Atencion Especial
+
+- **Rendimiento (FS sincrono)**: todas las operaciones de disco son sincronas (`readdirSync`, `writeFileSync`, `copyFileSync`, `statSync`) sobre el hilo principal de la extension; con miles de archivos o directorios remotos (red, cloud sync) la UI puede bloquearse.
+- **Recursion**: `findFileRecursive` es recursivo sin limite de profundidad; rutas muy profundas o ciclos simbolicos (symlinks) podrian causar recursion excesiva.
+- **Seguridad**: los nombres de archivo se interpolan directamente en rutas (sin sanitizacion); un nombre con separadores (`../`) podria escapar del directorio de categoria si la entrada proviene de fuentes no confiables; hoy el input es del usuario, pero conviene validar.
+- **Persistencia de configuracion**: `chat.promptFilesLocations` se actualiza con `ConfigurationTarget.Global`; depende de que el setting exista en la version de VS Code (se ignora silenciosamente si no).
+- **Integracion con Copilot**: la extension asume la ruta `~/.vscode/github-copilot/`; cambios de Copilot en su layout interno romperian la instalacion.
+- **Sincronizacion de datos**: no hay watchers (`FileSystemWatcher`); cambios externos al espacio global no se reflejan hasta un refresh manual o cambio de configuracion.
+
+### Deuda Tecnica Identificada
+
+- **FS sincrono generalizado**: migrar a APIs asincronas (`fs/promises`) en operaciones de escritura/lectura masivas.
+- **Tests limitados**: solo `fsUtils` tiene cobertura (13 tests); faltan tests para `FileManagerService`, `InstallationService`, `toPromptFileName` cubre poco de `ChatParticipantService`, providers y comandos.
+- **Precios de modelos hardcodeados** en `MODEL_PRICES`; deberian ser configurables o provenir de una fuente externa.
+- **Encoder unico (`cl100k_base`)** para todos los modelos, aunque Claude/Gemini usan tokenizers distintos; los costos son aproximados.
+- **Publisher `undefined_publisher`**: la extension no esta publicada; `checkForUpdates` y el link de Marketplace dependen de una identidad que no existe oficialmente.
+- **Parsing del chat participant por regex**: frágil ante variaciones de idioma/espacios; considerar un parser mas robusto o comandos slash.
+- **Duplicidad de logica de configuracion**: `ensureCopilotPromptConfig` (extension.ts) y `updateCopilotConfig` (installationService) hacen lo mismo; consolidar.
+- **`getChildren` de Configurations construye items "info" que simulan botones** con emojis en el label; al renderizar como TreeItems pierden accesibilidad y orden estable; considerar `TreeItem2` con botones reales o `view/title` en su lugar.
+- **Validacion de extension duplicada**: al crear archivos, la logica de limpieza de extension no cubre todos los casos (por ejemplo, nombres que terminan en `.prompt.md` con espacios).
+- **`checkForUpdates` con ID hardcodeado** de extension en dos sitios (comando y URL); centralizar en constantes.
+- **Vista Configurations usa caracteres de emoji en los labels** de los items de accion y encabezados, que dependen del soporte de fuente del tema; convendria migrarlos a `ThemeIcon` declarativos o labels planos.
+- **Falta documentacion de arquitectura en el repo**: este documento mitiga parcialmente; conviene mantenerlo al dia con cada release.

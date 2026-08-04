@@ -68,6 +68,7 @@ Adicionalmente incluye una vista de contador de tokens del archivo activo con es
 - **UC-15 Token Counter**: estadisticas del archivo activo (tokens exactos con `cl100k_base`, caracteres, palabras, lineas y costo estimado por cuatro modelos).
 - **UC-16 Abrir ruta global en el sistema**: `revealFileInOS` (crea la ruta si no existe).
 - **UC-17 Buscar actualizaciones**: consulta la version publicada en Marketplace y ofrece abrir la pagina de la extension.
+- **UC-18 Activar / Desactivar auto-sync**: alterna `fhizxAiTools.cloud.autoSync` desde la vista Configurations; muestra notificacion con el nuevo estado y refresca las vistas.
 
 ### Casos de Uso Secundarios y Alternativos
 
@@ -92,6 +93,7 @@ Adicionalmente incluye una vista de contador de tokens del archivo activo con es
 | UC-13 (usar) | Ruta global configurada; recurso existente. | Contenido del recurso mostrado en el chat (o mensaje de no encontrado). |
 | UC-14 (listar) | Ruta global configurada. | Listado Markdown por categoria en el chat. |
 | UC-15 (Token counter) | Archivo activo en el editor. | Estadisticas mostradas en la vista; se actualizan con cada cambio o cambio de editor activo. |
+| UC-18 (Toggle auto-sync) | Nube conectada (opcional). | `fhizxAiTools.cloud.autoSync` alternado en Global; notificacion mostrada; vistas refrescadas. |
 
 ---
 

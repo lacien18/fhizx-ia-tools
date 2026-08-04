@@ -2,7 +2,7 @@
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
   "description": "Gestiona prompts, agents, skills, context y notas para herramientas de IA",
-  "version": "1.4.2",
+  "version": "1.4.1",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -214,6 +214,11 @@
         "command": "fhizxAiTools.cloudDisconnect",
         "title": "Desconectar Nube",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "fhizxAiTools.cloudToggleAutoSync",
+        "title": "Activar / Desactivar Auto-sync",
+        "icon": "$(sync)"
       }
     ],
     "submenus": [

@@ -152,6 +152,16 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
         },
       ),
       new ConfigurationItem(
+        `🔁 Auto-sync: ${autoSync ? "Desactivar" : "Activar"}`,
+        `- ${autoSync ? "Desactiva" : "Activa"} la sincronización automática al guardar cambios.`,
+        "",
+        "info",
+        {
+          command: COMMANDS.CLOUD_TOGGLE_AUTO_SYNC,
+          title: "Activar / Desactivar Auto-sync",
+        },
+      ),
+      new ConfigurationItem(
         "",
         isCloudConnected
           ? `Conectado a ${cloudRepo} · auto-sync ${

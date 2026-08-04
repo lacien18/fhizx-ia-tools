@@ -477,6 +477,24 @@ export function registerCommands(
         notifyFsError("No se pudo desconectar la nube", error);
       }
     }),
+
+    vscode.commands.registerCommand(
+      COMMANDS.CLOUD_TOGGLE_AUTO_SYNC,
+      async () => {
+        const current = cloudService.getAutoSyncEnabled();
+        await vscode.workspace
+          .getConfiguration(CONFIG_NAMESPACE)
+          .update(
+            CONFIG_KEYS.CLOUD_AUTO_SYNC,
+            !current,
+            vscode.ConfigurationTarget.Global,
+          );
+        vscode.window.showInformationMessage(
+          `Auto-sincronización ${!current ? "activada" : "desactivada"}.`,
+        );
+        refreshAll();
+      },
+    ),
   );
 }
 

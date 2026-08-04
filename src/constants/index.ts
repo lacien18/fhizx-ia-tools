@@ -67,6 +67,7 @@ export const COMMANDS = {
   CLOUD_PUSH: "fhizxAiTools.cloudPush",
   CLOUD_PULL: "fhizxAiTools.cloudPull",
   CLOUD_DISCONNECT: "fhizxAiTools.cloudDisconnect",
+  CLOUD_TOGGLE_AUTO_SYNC: "fhizxAiTools.cloudToggleAutoSync",
 } as const;
 
 export const COMMAND_PREFIX = {

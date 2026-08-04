@@ -214,6 +214,11 @@
         "command": "fhizxAiTools.cloudDisconnect",
         "title": "Desconectar Nube",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "fhizxAiTools.cloudToggleAutoSync",
+        "title": "Activar / Desactivar Auto-sync",
+        "icon": "$(sync)"
       }
     ],
     "submenus": [

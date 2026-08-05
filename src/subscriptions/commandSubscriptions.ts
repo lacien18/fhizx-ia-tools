@@ -137,6 +137,28 @@ export function registerCommands(
       vscode.window.showTextDocument(uri),
     ),
 
+    vscode.commands.registerCommand(
+      COMMANDS.PREVIEW_MARKDOWN,
+      async (node?: WorkspaceItem | vscode.Uri) => {
+        const filePath = resolveResourceFilePath(node);
+        if (!filePath || !fileExists(filePath)) {
+          vscode.window.showWarningMessage(
+            "Por favor selecciona o abre un archivo válido para previsualizar.",
+          );
+          return;
+        }
+        const uri = vscode.Uri.file(filePath);
+        try {
+          await vscode.commands.executeCommand("markdown.showPreview", uri);
+        } catch (error) {
+          notifyFsError(
+            "No se pudo abrir la previsualización de Markdown",
+            error,
+          );
+        }
+      },
+    ),
+
     // Generadores dinámicos para comandos específicos
     ...categories.flatMap((cat) => {
       const commandName = capitalizeCategory(cat);
@@ -190,7 +212,7 @@ export function registerCommands(
         try {
           fs.renameSync(oldPath, newPath);
           refreshAll();
-          cloudService.schedulePush();
+          cloudService.scheduleExplicitPush();
           vscode.window.showInformationMessage(
             "Elemento modificado exitosamente.",
           );
@@ -214,7 +236,7 @@ export function registerCommands(
         try {
           deletePath(node.resourceUri.fsPath, node.isFolder);
           refreshAll();
-          cloudService.schedulePush();
+          cloudService.scheduleExplicitPush();
           vscode.window.showInformationMessage("Elemento eliminado.");
         } catch (error) {
           notifyFsError("No se pudo eliminar el elemento", error);

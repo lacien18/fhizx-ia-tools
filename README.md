@@ -22,7 +22,7 @@
 
 - **Espacio Global Personalizable**: Define una ruta única mediante la configuración de VS Code donde se almacenarán todos tus recursos, permitiéndote acceder a ellos independientemente del proyecto en el que estés trabajando actualmente. Al configurarla, la extensión crea automáticamente las carpetas `prompts`, `agents`, `skills`, `context` y `notes`.
 
-- **☁️ Nube Gratuita (GitHub)**: Conecta tu espacio global a un repositorio privado y gratuito de GitHub para respaldar tus archivos en la nube. Sincronización automática al guardar (o manual con los botones **Subir / Bajar**), sin necesidad de Git instalado localmente. El repositorio se crea automáticamente si no existe y tu token se guarda de forma segura en el SecretStorage de VS Code.
+- **☁️ Nube Gratuita (GitHub)**: Conecta tu espacio global a un repositorio privado y gratuito de GitHub para respaldar tus archivos en la nube. Sincronización automática al guardar (o manual con los botones **Subir / Bajar**), sin necesidad de Git instalado localmente. El repositorio se crea automáticamente si no existe y tu token se guarda de forma segura en el SecretStorage de VS Code. Cada push es un snapshot completo: carpetas vacías se preservan mediante `.gitkeep` y archivos eliminados localmente también se eliminan del remoto.
 
 - **Chat Participant (`@fhizx-ai-tools`)**: Interactúa con tu espacio global directamente desde el chat de Copilot o herramientas integradas usando comandos como `@fhizx-ai-tools usar <nombre>` para cargar contenido instantáneamente a partir de tus archivos locales gestionados por la extensión.
 
@@ -52,7 +52,7 @@ Respaldar tus recursos en la nube es gratis e instantáneo. La sección **NUBE G
 - **🔌 Desconectar Nube**: Deja de sincronizar sin borrar tus archivos locales.
 - **Estado de la Nube**: Muestra el repositorio conectado (`usuario/repo`) y si la auto-sincronización está activada o desactivada.
 
-> ⚙️ **Auto-sincronización**: cuando está activada, al crear, modificar, renombrar o eliminar archivos o carpetas en tu ruta global, la extensión sube los cambios a la nube automáticamente (con un pequeño debounce de ~1,5 s) sin mostrar ventanas de confirmación. Desactívala desde la vista Configurations con el botón **🔁 Auto-sync: Desactivar** o con la opción `fhizxAiTools.cloud.autoSync` en la configuración de usuario.
+> ⚙️ **Auto-sincronización**: cuando está activada, al crear, modificar, renombrar o eliminar archivos o carpetas en tu ruta global, la extensión sube los cambios a la nube automáticamente (con un pequeño debounce de ~1,5 s) sin mostrar ventanas de confirmación. Las operaciones CRUD realizadas desde la extensión (crear, renombrar, eliminar) siempre disparan un push a la nube, incluso con auto-sync desactivado. Desactívala desde la vista Configurations con el botón **🔁 Auto-sync: Desactivar** o con la opción `fhizxAiTools.cloud.autoSync` en la configuración de usuario.
 
 ### Navegación y Creación
 En el panel lateral podrás ver las secciones correspondientes a Prompts, Agents, Skills, Context y Notes. Utiliza los botones en la barra superior o el menú contextual para:
@@ -99,6 +99,7 @@ Una vez configurado tu espacio global, puedes invocar al participante `@fhizx-ai
 | `fhizxAiTools.renameItem` | Modificar Nombre | $(edit) |
 | `fhizxAiTools.deleteItem` | Eliminar recurso | $(trash) |
 | `fhizxAiTools.openFile` | Abrir Archivo | — |
+| `fhizxAiTools.previewMarkdown` | Previsualizar Markdown | $(eye) |
 | `fhizxAiTools.sendToChat` | Enviar al Chat de IA | $(wand) |
 | `fhizxAiTools.copyToClipboard` | Copiar en portapapeles | $(copy) |
 | `fhizxAiTools.installItem` | Instalar en Copilot | $(add) |

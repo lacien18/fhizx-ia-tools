@@ -48,6 +48,7 @@ export const VIEW_IDS = {
 
 export const COMMANDS = {
   OPEN_FILE: "fhizxAiTools.openFile",
+  PREVIEW_MARKDOWN: "fhizxAiTools.previewMarkdown",
   SET_GLOBAL_PATH: "fhizxAiTools.setGlobalPath",
   REFRESH: "fhizxAiTools.refresh",
   SEND_TO_CHAT: "fhizxAiTools.sendToChat",

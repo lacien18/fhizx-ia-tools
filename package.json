@@ -167,6 +167,11 @@
         "title": "Abrir Archivo"
       },
       {
+        "command": "fhizxAiTools.previewMarkdown",
+        "title": "Previsualizar Markdown",
+        "icon": "$(eye)"
+      },
+      {
         "command": "fhizxAiTools.checkForUpdates",
         "title": "FhizxAITools: Buscar Actualizaciones"
       },
@@ -308,12 +313,22 @@
           "group": "inline"
         },
         {
+          "command": "fhizxAiTools.previewMarkdown",
+          "when": "viewItem == file_uninstalled || viewItem == file_installed",
+          "group": "inline@1"
+        },
+        {
           "submenu": "fhizxAiTools.itemMenu",
           "when": "viewItem == file_uninstalled || viewItem == file_installed || viewItem == folder",
           "group": "inline"
         }
       ],
       "fhizxAiTools.itemMenu": [
+        {
+          "command": "fhizxAiTools.previewMarkdown",
+          "when": "viewItem == file_uninstalled || viewItem == file_installed",
+          "group": "1_actions@0"
+        },
         {
           "command": "fhizxAiTools.sendToChat",
           "when": "viewItem == file_uninstalled || viewItem == file_installed",

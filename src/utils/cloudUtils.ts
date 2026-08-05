@@ -23,8 +23,9 @@ export function toPosixRelativePath(filePath: string, rootDir: string): string {
 
 /**
  * Recorre un directorio y devuelve las rutas relativas (posix) de todos los
- * archivos, excluyendo ruido como `.git` o `.DS_Store`. Devuelve la lista
- * ordenada alfabéticamente para tener resultados deterministas.
+ * archivos, excluyendo ruido como `.git` o `.DS_Store`. Para carpetas vacías
+ * agrega un `.gitkeep` virtual para que la estructura se preserve en git.
+ * Devuelve la lista ordenada alfabéticamente para tener resultados deterministas.
  */
 export function collectLocalFiles(rootDir: string): string[] {
   const result: string[] = [];
@@ -36,15 +37,24 @@ export function collectLocalFiles(rootDir: string): string[] {
       console.warn(`No se pudo acceder al directorio: ${dir}`);
       return;
     }
-    entries.sort((a, b) => a.name.localeCompare(b.name));
-    for (const entry of entries) {
-      if (IGNORED_NAMES.has(entry.name)) continue;
+    const filtered = entries
+      .filter((e) => !IGNORED_NAMES.has(e.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    let hasContent = false;
+    for (const entry of filtered) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath);
+        hasContent = true;
       } else if (entry.isFile()) {
         result.push(toPosixRelativePath(fullPath, rootDir));
+        hasContent = true;
       }
+    }
+    // Carpeta vacía (sin archivos ni subcarpetas válidas): registrar .gitkeep
+    if (!hasContent && dir !== rootDir) {
+      result.push(toPosixRelativePath(path.join(dir, ".gitkeep"), rootDir));
     }
   };
   walk(rootDir);

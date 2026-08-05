@@ -83,6 +83,27 @@ describe("cloudUtils ==>", () => {
       expect(result).toEqual([]);
     });
 
+    it("Given an empty subdirectory, When collecting, Then returns .gitkeep for that folder", () => {
+      // Arrange
+      const emptyFolder = path.join(tmpDir, "agents");
+      fs.mkdirSync(emptyFolder);
+      // Act
+      const result = collectLocalFiles(tmpDir);
+      // Assert
+      expect(result).toEqual(["agents/.gitkeep"]);
+    });
+
+    it("Given a subdirectory with files, When collecting, Then does not add .gitkeep", () => {
+      // Arrange
+      const folder = path.join(tmpDir, "prompts");
+      fs.mkdirSync(folder);
+      fs.writeFileSync(path.join(folder, "p-a.prompt.md"), "x");
+      // Act
+      const result = collectLocalFiles(tmpDir);
+      // Assert
+      expect(result).toEqual(["prompts/p-a.prompt.md"]);
+    });
+
     it("Given a missing directory, When collecting, Then returns empty array", () => {
       // Act
       const result = collectLocalFiles(path.join(tmpDir, "no-existe"));

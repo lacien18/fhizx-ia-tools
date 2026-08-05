@@ -41,10 +41,6 @@ interface GitHubRef {
   object: { sha: string };
 }
 
-interface GitHubCommit {
-  tree: { sha: string };
-}
-
 interface GitHubTreeBlob {
   path: string;
   type: string;
@@ -310,7 +306,8 @@ export class CloudSyncService {
     const entries: GitHubTreeEntry[] = [];
     for (const rel of localFiles) {
       const abs = path.join(globalPath, ...rel.split("/"));
-      const content = fs.readFileSync(abs);
+      const isVirtualGitkeep = rel.endsWith(".gitkeep") && !fs.existsSync(abs);
+      const content = isVirtualGitkeep ? Buffer.alloc(0) : fs.readFileSync(abs);
       const blob = await apiRequest<{ sha: string }>({
         method: "POST",
         path: `/repos/${owner}/${repo}/git/blobs`,
@@ -324,7 +321,6 @@ export class CloudSyncService {
 
     // Resuelve el commit actual como padre (404 = repositorio aún vacío).
     let parentSha: string | undefined;
-    let baseTree: string | undefined;
     try {
       const ref = await apiRequest<GitHubRef>({
         method: "GET",
@@ -332,24 +328,17 @@ export class CloudSyncService {
         token,
       });
       parentSha = ref.object.sha;
-      const commit = await apiRequest<GitHubCommit>({
-        method: "GET",
-        path: `/repos/${owner}/${repo}/git/commits/${parentSha}`,
-        token,
-      });
-      baseTree = commit.tree.sha;
     } catch (err) {
       if ((err as GitHubError).statusCode !== 404) throw err;
-      // Primer commit: sin padre y sin árbol base.
     }
 
-    // Al pasar `base_tree`, los archivos no incluidos en el nuevo árbol
-    // (eliminados localmente) desaparecen también en la nube.
+    // Sin base_tree: el árbol resultante contiene SOLO los archivos locales
+    // (snapshot completo). Archivos eliminados localmente desaparecen del remoto.
     const tree = await apiRequest<{ sha: string }>({
       method: "POST",
       path: `/repos/${owner}/${repo}/git/trees`,
       token,
-      body: { base_tree: baseTree, tree: entries },
+      body: { tree: entries },
     });
 
     const commit = await apiRequest<{ sha: string }>({
@@ -363,12 +352,23 @@ export class CloudSyncService {
       },
     });
 
-    await apiRequest<GitHubRef>({
-      method: "PATCH",
-      path: `/repos/${owner}/${repo}/git/refs/heads/${defaultBranch}`,
-      token,
-      body: { sha: commit.sha, force: false },
-    });
+    if (parentSha) {
+      // Rama existente: actualizar ref con force para garantizar el push.
+      await apiRequest<GitHubRef>({
+        method: "PATCH",
+        path: `/repos/${owner}/${repo}/git/refs/heads/${defaultBranch}`,
+        token,
+        body: { sha: commit.sha, force: true },
+      });
+    } else {
+      // Primer commit en repo vacío: crear la referencia de la rama.
+      await apiRequest<GitHubRef>({
+        method: "POST",
+        path: `/repos/${owner}/${repo}/git/refs`,
+        token,
+        body: { ref: `refs/heads/${defaultBranch}`, sha: commit.sha },
+      });
+    }
 
     return { uploaded: entries.length };
   }
@@ -508,9 +508,19 @@ export class CloudSyncService {
     }
   }
 
-  /** Programa un push con debounce si auto-sync está activado. */
+  /** Programa un push con debounce (requiere nube configurada y auto-sync activo). */
   schedulePush(): void {
     if (!this.getAutoSyncEnabled()) return;
+    if (this._syncing) return;
+    if (this._debounceTimer) clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => {
+      this._debounceTimer = undefined;
+      void this.autoPush();
+    }, AUTO_SYNC_DEBOUNCE_MS);
+  }
+
+  /** Programa un push incondicional tras una operación CRUD explícita. */
+  scheduleExplicitPush(): void {
     if (this._syncing) return;
     if (this._debounceTimer) clearTimeout(this._debounceTimer);
     this._debounceTimer = setTimeout(() => {

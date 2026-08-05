@@ -125,7 +125,7 @@ export class FileManagerService {
 
       fs.writeFileSync(filePath, this.getBoilerplateContent(category, name));
       refreshAll();
-      this.cloudService?.schedulePush();
+      this.cloudService?.scheduleExplicitPush();
       vscode.window.showTextDocument(vscode.Uri.file(filePath));
     } catch (error) {
       notifyFsError("No se pudo crear el archivo", error);
@@ -166,7 +166,7 @@ export class FileManagerService {
 
       fs.mkdirSync(folderPath, { recursive: true });
       refreshAll();
-      this.cloudService?.schedulePush();
+      this.cloudService?.scheduleExplicitPush();
     } catch (error) {
       notifyFsError("No se pudo crear la carpeta", error);
     }

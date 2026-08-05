@@ -290,13 +290,14 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **Seguridad**: los nombres de archivo se interpolan directamente en rutas (sin sanitizacion); un nombre con separadores (`../`) podria escapar del directorio de categoria si la entrada proviene de fuentes no confiables; hoy el input es del usuario, pero conviene validar.
 - **Persistencia de configuracion**: `chat.promptFilesLocations` se actualiza con `ConfigurationTarget.Global`; depende de que el setting exista en la version de VS Code (se ignora silenciosamente si no).
 - **Integracion con Copilot**: la extension asume la ruta `~/.vscode/github-copilot/`; cambios de Copilot en su layout interno romperian la instalacion.
-- **Sincronizacion de datos**: la extension usa un `FileSystemWatcher` sobre la ruta global y ademas invoca `schedulePush()` explicitamente tras cada operacion CRUD (crear, renombrar, eliminar archivo/carpeta). Cuando auto-sync esta activado, los cambios se suben automaticamente a la nube tras un debounce de 1,5 s sin ventana de confirmacion. Cambios externos (fuera de la extension) tambien se detectan por el watcher.
+- **Sincronizacion de datos**: la extension usa un `FileSystemWatcher` sobre la ruta global y ademas invoca `scheduleExplicitPush()` tras cada operacion CRUD (crear, renombrar, eliminar archivo/carpeta), independientemente de si auto-sync esta activado. Cuando auto-sync esta activado, los cambios detectados por el watcher tambien se suben automaticamente tras un debounce de 1,5 s. Carpetas vacias se sincronizan mediante un `.gitkeep` virtual generado por `collectLocalFiles`.
+- **Push como snapshot completo**: cada push crea un arbol git sin `base_tree`, de modo que el repositorio remoto es un espejo exacto del estado local. Archivos eliminados localmente desaparecen del remoto en el siguiente push. El primer push a un repo vacio crea la referencia de la rama con `POST /git/refs`; pushes subsecuentes actualizan la ref con `force: true`.
 - **Pull desde la nube**: la descarga de blobs usa la respuesta JSON (base64) en lugar de `Accept: application/vnd.github.raw`, ya que el media type raw puede no devolver contenido correctamente en todos los escenarios. Cada blob se descarga con try-catch individual para tolerar fallos parciales sin abortar la operacion completa.
 
 ### Deuda Tecnica Identificada
 
 - **FS sincrono generalizado**: migrar a APIs asincronas (`fs/promises`) en operaciones de escritura/lectura masivas.
-- **Tests limitados**: solo `fsUtils` tiene cobertura (13 tests); faltan tests para `FileManagerService`, `InstallationService`, `toPromptFileName` cubre poco de `ChatParticipantService`, providers y comandos.
+- **Tests limitados**: `fsUtils` y `cloudUtils` tienen cobertura (24 tests); faltan tests para `FileManagerService`, `InstallationService`, `ChatParticipantService`, providers y comandos.
 - **Precios de modelos hardcodeados** en `MODEL_PRICES`; deberian ser configurables o provenir de una fuente externa.
 - **Encoder unico (`cl100k_base`)** para todos los modelos, aunque Claude/Gemini usan tokenizers distintos; los costos son aproximados.
 - **Publisher `undefined_publisher`**: la extension no esta publicada; `checkForUpdates` y el link de Marketplace dependen de una identidad que no existe oficialmente.

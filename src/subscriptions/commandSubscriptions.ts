@@ -137,6 +137,28 @@ export function registerCommands(
       vscode.window.showTextDocument(uri),
     ),
 
+    vscode.commands.registerCommand(
+      COMMANDS.PREVIEW_MARKDOWN,
+      async (node?: WorkspaceItem | vscode.Uri) => {
+        const filePath = resolveResourceFilePath(node);
+        if (!filePath || !fileExists(filePath)) {
+          vscode.window.showWarningMessage(
+            "Por favor selecciona o abre un archivo válido para previsualizar.",
+          );
+          return;
+        }
+        const uri = vscode.Uri.file(filePath);
+        try {
+          await vscode.commands.executeCommand("markdown.showPreview", uri);
+        } catch (error) {
+          notifyFsError(
+            "No se pudo abrir la previsualización de Markdown",
+            error,
+          );
+        }
+      },
+    ),
+
     // Generadores dinámicos para comandos específicos
     ...categories.flatMap((cat) => {
       const commandName = capitalizeCategory(cat);

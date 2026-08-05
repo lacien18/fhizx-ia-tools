@@ -99,6 +99,7 @@ Una vez configurado tu espacio global, puedes invocar al participante `@fhizx-ai
 | `fhizxAiTools.renameItem` | Modificar Nombre | $(edit) |
 | `fhizxAiTools.deleteItem` | Eliminar recurso | $(trash) |
 | `fhizxAiTools.openFile` | Abrir Archivo | — |
+| `fhizxAiTools.previewMarkdown` | Previsualizar Markdown | $(eye) |
 | `fhizxAiTools.sendToChat` | Enviar al Chat de IA | $(wand) |
 | `fhizxAiTools.copyToClipboard` | Copiar en portapapeles | $(copy) |
 | `fhizxAiTools.installItem` | Instalar en Copilot | $(add) |

@@ -368,10 +368,22 @@ export function registerCommands(
           try {
             progress.report({ message: "Consultando repositorio…" });
 
+            // 1. Obtener el SHA del árbol raíz de la rama main
+            const branchInfo = await ghRequest<{
+              commit: { commit: { tree: { sha: string } } };
+            }>(`/repos/${updateOwner}/${updateRepo}/branches/main`);
+            if (!branchInfo?.commit?.commit?.tree?.sha) {
+              vscode.window.showWarningMessage(
+                "No se pudo consultar el repositorio de actualizaciones.",
+              );
+              return;
+            }
+
+            // 2. Obtener el árbol recursivo para encontrar archivos en src/versions
             const tree = await ghRequest<{
               tree: { path: string; sha: string; type: string }[];
             }>(
-              `/repos/${updateOwner}/${updateRepo}/git/trees/main?recursive=1`,
+              `/repos/${updateOwner}/${updateRepo}/git/trees/${branchInfo.commit.commit.tree.sha}?recursive=1`,
             );
             if (!tree?.tree) {
               vscode.window.showWarningMessage(
@@ -383,7 +395,7 @@ export function registerCommands(
             const vsixFiles = tree.tree.filter(
               (f) =>
                 f.type === "blob" &&
-                f.path.startsWith("versions/") &&
+                f.path.startsWith("src/versions/") &&
                 f.path.endsWith(".vsix") &&
                 f.path.includes("fhizx-ai-tools-manager-"),
             );
@@ -419,13 +431,6 @@ export function registerCommands(
 
             parsed.sort((a, b) => compareVersions(b.version, a.version));
             const latest = parsed[0];
-
-            if (latest.version === localVersion) {
-              vscode.window.showInformationMessage(
-                `FhizxAITools ${localVersion} se encuentra actualizado.`,
-              );
-              return;
-            }
 
             if (compareVersions(latest.version, localVersion) <= 0) {
               vscode.window.showInformationMessage(
@@ -663,6 +668,32 @@ function ghRequest<T>(apiPath: string, token?: string): Promise<T | undefined> {
         headers,
       },
       (res) => {
+        // Seguir redirecciones (301, 302, 307, 308)
+        if (
+          res.statusCode &&
+          [301, 302, 307, 308].includes(res.statusCode) &&
+          res.headers.location
+        ) {
+          try {
+            const redirectUrl = new URL(res.headers.location);
+            const redirectPath =
+              redirectUrl.hostname === "api.github.com"
+                ? redirectUrl.pathname + redirectUrl.search
+                : res.headers.location;
+            resolve(ghRequest<T>(redirectPath, token));
+          } catch {
+            resolve(undefined);
+          }
+          return;
+        }
+
+        // Rechazar respuestas con error HTTP
+        if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+          res.resume(); // Consumir el body para liberar el socket
+          resolve(undefined);
+          return;
+        }
+
         let data = "";
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => {

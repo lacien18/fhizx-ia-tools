@@ -1,18 +1,19 @@
 import * as vscode from "vscode";
 import { WorkspaceTreeDataProvider } from "./providers/workspaceTreeDataProvider";
-import { TokenCounterTreeDataProvider } from "./providers/tokenCounterProvider";
-import { ConfigurationTreeDataProvider } from "./providers/configurationTreeDataProvider";
 import { FileManagerService } from "./services/fileManagerService";
 import { registerChatParticipant } from "./services/chatParticipantService";
 import { CloudSyncService } from "./services/cloudSyncService";
 import { registerCommands } from "./subscriptions/commandSubscriptions";
+import {
+  MainWebviewProvider,
+  MAIN_WEBVIEW_ID,
+} from "./webview/mainWebviewProvider";
 import {
   CONFIG_NAMESPACE,
   CONFIG_KEYS,
   COMMANDS,
   COPILOT_CATEGORIES,
   COPILOT_BASE_DIR,
-  VIEW_IDS,
 } from "./constants";
 import {
   ensureGlobalStructure,
@@ -23,44 +24,32 @@ export function activate(context: vscode.ExtensionContext) {
   // Servicio de nube gratuita (GitHub)
   const cloudService = new CloudSyncService(context);
 
-  // 1. Inicialización de Providers
+  // 1. Category providers (used by FileManagerService for path resolution)
   const providers = {
     prompts: new WorkspaceTreeDataProvider("prompts"),
     agents: new WorkspaceTreeDataProvider("agents"),
     skills: new WorkspaceTreeDataProvider("skills"),
     context: new WorkspaceTreeDataProvider("context"),
     notes: new WorkspaceTreeDataProvider("notes"),
-    tokenCounterProvider: new TokenCounterTreeDataProvider(),
-    configurations: new ConfigurationTreeDataProvider(cloudService),
   };
 
-  // Registro de DataProviders en la UI de VS Code
-  vscode.window.registerTreeDataProvider(VIEW_IDS.PROMPTS, providers.prompts);
-  vscode.window.registerTreeDataProvider(VIEW_IDS.AGENTS, providers.agents);
-  vscode.window.registerTreeDataProvider(VIEW_IDS.SKILLS, providers.skills);
-  vscode.window.registerTreeDataProvider(VIEW_IDS.CONTEXT, providers.context);
-  vscode.window.registerTreeDataProvider(VIEW_IDS.NOTES, providers.notes);
-  vscode.window.registerTreeDataProvider(
-    VIEW_IDS.TOKEN_COUNTER,
-    providers.tokenCounterProvider,
+  // 2. Webview UI (replaces all tree views with a single unified panel)
+  const mainWebview = new MainWebviewProvider(
+    context.extensionUri,
+    cloudService,
   );
-  vscode.window.registerTreeDataProvider(
-    VIEW_IDS.CONFIGURATIONS,
-    providers.configurations,
+  mainWebview.setContext(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(MAIN_WEBVIEW_ID, mainWebview),
   );
 
-  // 2. Servicios de negocio y chat
+  // 3. Servicios de negocio y chat
   const fileManager = new FileManagerService(providers, cloudService);
   registerChatParticipant(context, fileManager);
 
   // Función global de refresco
   const refreshAll = () => {
-    providers.prompts.refresh();
-    providers.agents.refresh();
-    providers.skills.refresh();
-    providers.context.refresh();
-    providers.notes.refresh();
-    providers.configurations.refresh();
+    mainWebview.refresh();
   };
 
   // 3. Suscripciones de Comandos
@@ -126,6 +115,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // 5. Registrar rutas de prompt files en Copilot al activarse
   ensureCopilotPromptConfig();
+
+  // 6. Verificar actualizaciones automáticamente al activarse
+  void vscode.commands.executeCommand(COMMANDS.CHECK_FOR_UPDATES);
 }
 
 export function deactivate() {}

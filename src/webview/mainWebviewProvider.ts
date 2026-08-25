@@ -31,11 +31,12 @@ export const MAIN_WEBVIEW_ID = "fhizxAiTools.mainView";
 
 const SECTION_ORDER_KEY = "fhizxAiTools.sectionOrder";
 const DEFAULT_SECTION_ORDER = [
+  "utils",
   "notes",
   "agents",
   "skills",
-  "context",
   "prompts",
+  "context",
 ] as const;
 
 export class MainWebviewProvider implements vscode.WebviewViewProvider {
@@ -294,14 +295,6 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         </div>`;
     }
 
-    const order = this._getSectionOrder().filter(
-      (id) => id !== "tokens" && id !== "config",
-    );
-    const sections = order
-      .filter((id) => sectionMap[id])
-      .map((id) => sectionMap[id])
-      .join("");
-
     const tabsHtml = `
       <div class="bottom-tabs">
         <div class="tab-bar">
@@ -312,9 +305,8 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         <div class="tab-panel" id="tab-config">${configContent}</div>
       </div>`;
 
-    // Wrap tabs in a "Utils" accordion section
-    const utilsSection = `
-      <div class="accordion-section open" data-section="utils">
+    sectionMap["utils"] = `
+      <div class="accordion-section open" data-section="utils" draggable="true">
         <div class="accordion-header">
           <span class="accordion-chevron">▶</span>
           <span class="accordion-title">Utils</span>
@@ -323,6 +315,14 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
           <div class="accordion-content">${tabsHtml}</div>
         </div>
       </div>`;
+
+    const order = this._getSectionOrder().filter(
+      (id) => id !== "tokens" && id !== "config",
+    );
+    const sections = order
+      .filter((id) => sectionMap[id])
+      .map((id) => sectionMap[id])
+      .join("");
 
     return /* html */ `<!DOCTYPE html>
 <html lang="es">
@@ -334,7 +334,6 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   ${sections}
-  ${utilsSection}
   <div id="context-menu" class="context-menu"></div>
   <script>${getScript()}</script>
 </body>

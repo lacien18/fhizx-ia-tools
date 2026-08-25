@@ -158,6 +158,7 @@ export function renderConfigPanel(config: {
   isCloudConnected: boolean;
   cloudRepo: string;
   autoSync: boolean;
+  version?: string;
 }): string {
   const statusBadge = config.isConfigured
     ? `<span class="badge success">✓ Configurado</span>`
@@ -209,6 +210,8 @@ export function renderConfigPanel(config: {
         <button class="btn secondary" data-action="checkForUpdates">Buscar Actualizaciones</button>
       </div>
     </div>
+
+    ${config.version ? `<div class="config-card" style="opacity:0.6; text-align:center; font-size:11px;">v${escapeHtml(config.version)}</div>` : ""}
   `;
 }
 

@@ -169,12 +169,15 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       // ignore
     }
 
+    const version = this._context?.extension?.packageJSON?.version || "";
+
     return renderConfigPanel({
       globalPath,
       isConfigured,
       isCloudConnected,
       cloudRepo,
       autoSync,
+      version,
     });
   }
 

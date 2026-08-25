@@ -69,6 +69,7 @@ export const COMMANDS = {
   CLOUD_PULL: "fhizxAiTools.cloudPull",
   CLOUD_DISCONNECT: "fhizxAiTools.cloudDisconnect",
   CLOUD_TOGGLE_AUTO_SYNC: "fhizxAiTools.cloudToggleAutoSync",
+  EXPORT_TO_PDF: "fhizxAiTools.exportToPdf",
 } as const;
 
 export const COMMAND_PREFIX = {

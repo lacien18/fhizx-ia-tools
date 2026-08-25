@@ -6,6 +6,7 @@ import { WorkspaceItem } from "../models/workspaceItemModel";
 import { FileManagerService } from "../services/fileManagerService";
 import { InstallationService } from "../services/installationService";
 import { CloudSyncService } from "../services/cloudSyncService";
+import { exportToPdf } from "../services/pdfExportService";
 import {
   CATEGORIES,
   COMMANDS,
@@ -156,6 +157,20 @@ export function registerCommands(
             error,
           );
         }
+      },
+    ),
+
+    vscode.commands.registerCommand(
+      COMMANDS.EXPORT_TO_PDF,
+      (node?: WorkspaceItem | vscode.Uri) => {
+        const filePath = resolveResourceFilePath(node);
+        if (!filePath || !fileExists(filePath)) {
+          vscode.window.showWarningMessage(
+            "Por favor selecciona o abre un archivo válido para exportar.",
+          );
+          return;
+        }
+        exportToPdf(filePath);
       },
     ),
 
@@ -340,37 +355,142 @@ export function registerCommands(
         | undefined;
       if (!localVersion) return;
 
+      const configured = await cloudService.isConfigured();
+      if (!configured) {
+        vscode.window.showWarningMessage(
+          "Conecta la nube (GitHub) para buscar actualizaciones.",
+        );
+        return;
+      }
+
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
           title: "Buscando actualizaciones de FhizxAITools…",
+          cancellable: false,
         },
-        async () => {
-          const latest = await fetchLatestMarketplaceVersion(
-            "undefined_publisher.fhizx-ai-tools-manager",
-          );
-          if (!latest) {
-            vscode.window.showInformationMessage(
-              "No se pudo verificar actualizaciones (extensión no publicada o sin conexión).",
+        async (progress) => {
+          try {
+            const owner = cloudService.getOwner();
+            const repo = cloudService.getRepo();
+            const token = await cloudService.getToken();
+            if (!token) return;
+
+            progress.report({ message: "Consultando repositorio…" });
+
+            // List repo contents at root to find .vsix files
+            const tree = await ghRequest<{
+              tree: { path: string; sha: string; type: string }[];
+            }>(`/repos/${owner}/${repo}/git/trees/main?recursive=1`, token);
+            if (!tree?.tree) {
+              vscode.window.showWarningMessage(
+                "No se pudo consultar el repositorio de actualizaciones.",
+              );
+              return;
+            }
+
+            const vsixFiles = tree.tree.filter(
+              (f) =>
+                f.type === "blob" &&
+                f.path.endsWith(".vsix") &&
+                f.path.includes("fhizx-ai-tools-manager-"),
             );
-            return;
-          }
-          if (latest !== localVersion) {
+
+            if (vsixFiles.length === 0) {
+              vscode.window.showInformationMessage(
+                "No hay versiones .vsix en el repositorio.",
+              );
+              return;
+            }
+
+            // Parse versions from filenames and find the latest
+            const parsed = vsixFiles
+              .map((f) => {
+                const match = f.path.match(
+                  /fhizx-ai-tools-manager-(\d+\.\d+\.\d+)\.vsix$/,
+                );
+                return match
+                  ? { path: f.path, sha: f.sha, version: match[1] }
+                  : null;
+              })
+              .filter(Boolean) as {
+              path: string;
+              sha: string;
+              version: string;
+            }[];
+
+            if (parsed.length === 0) {
+              vscode.window.showInformationMessage(
+                "No se encontraron versiones válidas en el repositorio.",
+              );
+              return;
+            }
+
+            parsed.sort((a, b) => compareVersions(b.version, a.version));
+            const latest = parsed[0];
+
+            if (latest.version === localVersion) {
+              vscode.window.showInformationMessage(
+                `FhizxAITools ${localVersion} se encuentra actualizado.`,
+              );
+              return;
+            }
+
+            if (compareVersions(latest.version, localVersion) <= 0) {
+              vscode.window.showInformationMessage(
+                `FhizxAITools ${localVersion} se encuentra actualizado.`,
+              );
+              return;
+            }
+
             const action = await vscode.window.showInformationMessage(
-              `FhizxAITools ${localVersion} — hay una versión nueva: ${latest}.`,
-              "Ver en Marketplace",
+              `FhizxAITools ${localVersion} → hay una versión nueva: ${latest.version}`,
+              "Instalar ahora",
             );
-            if (action) {
-              void vscode.env.openExternal(
-                vscode.Uri.parse(
-                  "https://marketplace.visualstudio.com/items?itemName=undefined_publisher.fhizx-ai-tools-manager",
-                ),
+            if (action !== "Instalar ahora") return;
+
+            progress.report({ message: "Descargando .vsix…" });
+
+            // Download blob content (base64)
+            const blob = await ghRequest<{ content: string }>(
+              `/repos/${owner}/${repo}/git/blobs/${latest.sha}`,
+              token,
+            );
+            if (!blob?.content) {
+              vscode.window.showErrorMessage(
+                "No se pudo descargar el archivo .vsix.",
+              );
+              return;
+            }
+
+            const tmpDir = require("os").tmpdir();
+            const tmpFile = require("path").join(
+              tmpDir,
+              `fhizx-ai-tools-manager-${latest.version}.vsix`,
+            );
+            require("fs").writeFileSync(
+              tmpFile,
+              Buffer.from(blob.content, "base64"),
+            );
+
+            progress.report({ message: "Instalando extensión…" });
+
+            await vscode.commands.executeCommand(
+              "workbench.extensions.installExtension",
+              vscode.Uri.file(tmpFile),
+            );
+
+            const reload = await vscode.window.showInformationMessage(
+              `FhizxAITools ${latest.version} instalado. Recarga la ventana para activar.`,
+              "Recargar",
+            );
+            if (reload === "Recargar") {
+              void vscode.commands.executeCommand(
+                "workbench.action.reloadWindow",
               );
             }
-          } else {
-            vscode.window.showInformationMessage(
-              `FhizxAITools ${localVersion} se encuentra actualizado.`,
-            );
+          } catch (error) {
+            notifyFsError("No se pudo buscar actualizaciones", error);
           }
         },
       );
@@ -523,28 +643,33 @@ export function registerCommands(
 }
 
 /**
- * Consulta la última versión publicada de una extensión en el Marketplace
- * de VS Code (API pública de extensionquery). Devuelve `undefined` si falla.
+ * Simple semver comparison. Returns >0 if a > b, <0 if a < b, 0 if equal.
  */
-function fetchLatestMarketplaceVersion(
-  extensionId: string,
-): Promise<string | undefined> {
-  return new Promise((resolve) => {
-    const body = JSON.stringify({
-      filters: [{ criteria: [{ filterType: 7, value: extensionId }] }],
-      flags: 0x1,
-    });
+function compareVersions(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
 
+/**
+ * Make a GitHub API request with token auth. Returns parsed JSON or undefined.
+ */
+function ghRequest<T>(apiPath: string, token: string): Promise<T | undefined> {
+  return new Promise((resolve) => {
     const req = https.request(
       {
-        hostname: "marketplace.visualstudio.com",
-        path: "/_apis/public/gallery/extensionquery",
-        method: "POST",
-        timeout: 8000,
+        hostname: "api.github.com",
+        path: apiPath,
+        method: "GET",
+        timeout: 15000,
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json;api-version=3.0-preview.1",
-          "Content-Length": Buffer.byteLength(body),
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "fhizx-ai-tools-manager",
         },
       },
       (res) => {
@@ -552,25 +677,18 @@ function fetchLatestMarketplaceVersion(
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => {
           try {
-            const json = JSON.parse(data);
-            resolve(
-              json?.results?.[0]?.extensions?.[0]?.versions?.[0]?.version as
-                | string
-                | undefined,
-            );
+            resolve(JSON.parse(data) as T);
           } catch {
             resolve(undefined);
           }
         });
       },
     );
-
     req.on("error", () => resolve(undefined));
     req.on("timeout", () => {
       req.destroy();
       resolve(undefined);
     });
-    req.write(body);
     req.end();
   });
 }

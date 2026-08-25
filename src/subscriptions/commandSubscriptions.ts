@@ -355,13 +355,8 @@ export function registerCommands(
         | undefined;
       if (!localVersion) return;
 
-      const configured = await cloudService.isConfigured();
-      if (!configured) {
-        vscode.window.showWarningMessage(
-          "Conecta la nube (GitHub) para buscar actualizaciones.",
-        );
-        return;
-      }
+      const updateOwner = "lacien18";
+      const updateRepo = "fhizx-ia-tools";
 
       await vscode.window.withProgress(
         {
@@ -371,17 +366,13 @@ export function registerCommands(
         },
         async (progress) => {
           try {
-            const owner = cloudService.getOwner();
-            const repo = cloudService.getRepo();
-            const token = await cloudService.getToken();
-            if (!token) return;
-
             progress.report({ message: "Consultando repositorio…" });
 
-            // List repo contents at root to find .vsix files
             const tree = await ghRequest<{
               tree: { path: string; sha: string; type: string }[];
-            }>(`/repos/${owner}/${repo}/git/trees/main?recursive=1`, token);
+            }>(
+              `/repos/${updateOwner}/${updateRepo}/git/trees/main?recursive=1`,
+            );
             if (!tree?.tree) {
               vscode.window.showWarningMessage(
                 "No se pudo consultar el repositorio de actualizaciones.",
@@ -392,6 +383,7 @@ export function registerCommands(
             const vsixFiles = tree.tree.filter(
               (f) =>
                 f.type === "blob" &&
+                f.path.startsWith("versions/") &&
                 f.path.endsWith(".vsix") &&
                 f.path.includes("fhizx-ai-tools-manager-"),
             );
@@ -403,7 +395,6 @@ export function registerCommands(
               return;
             }
 
-            // Parse versions from filenames and find the latest
             const parsed = vsixFiles
               .map((f) => {
                 const match = f.path.match(
@@ -451,10 +442,8 @@ export function registerCommands(
 
             progress.report({ message: "Descargando .vsix…" });
 
-            // Download blob content (base64)
             const blob = await ghRequest<{ content: string }>(
-              `/repos/${owner}/${repo}/git/blobs/${latest.sha}`,
-              token,
+              `/repos/${updateOwner}/${updateRepo}/git/blobs/${latest.sha}`,
             );
             if (!blob?.content) {
               vscode.window.showErrorMessage(
@@ -658,19 +647,20 @@ function compareVersions(a: string, b: string): number {
 /**
  * Make a GitHub API request with token auth. Returns parsed JSON or undefined.
  */
-function ghRequest<T>(apiPath: string, token: string): Promise<T | undefined> {
+function ghRequest<T>(apiPath: string, token?: string): Promise<T | undefined> {
   return new Promise((resolve) => {
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "fhizx-ai-tools-manager",
+    };
+    if (token) headers["Authorization"] = `token ${token}`;
     const req = https.request(
       {
         hostname: "api.github.com",
         path: apiPath,
         method: "GET",
         timeout: 15000,
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "fhizx-ai-tools-manager",
-        },
+        headers,
       },
       (res) => {
         let data = "";

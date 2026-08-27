@@ -211,7 +211,25 @@ export function renderConfigPanel(config: {
       </div>
     </div>
 
+    ${renderDevPanel()}
+
     ${config.version ? `<div class="config-card" style="opacity:0.6; text-align:center; font-size:11px;">v${escapeHtml(config.version)}</div>` : ""}
+  `;
+}
+
+/**
+ * Render the DEV panel HTML (herramientas para configurar el entorno de desarrollo en VS Code).
+ */
+export function renderDevPanel(): string {
+  return `
+    <div class="config-card">
+      <div class="config-card-title">Entorno de Desarrollo</div>
+      <div class="config-card-desc">Configura tu entorno de desarrollo en VS Code instalando el set de extensiones recomendadas y aplicando el estilo visual personalizado.</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" data-action="installDevExtensions">Instalar Extensiones</button>
+        <button class="btn secondary" data-action="installDevStyle">Instalar Estilo</button>
+      </div>
+    </div>
   `;
 }
 

@@ -30,6 +30,7 @@ const encoder = getEncoding(ENCODING_NAME);
 export const MAIN_WEBVIEW_ID = "fhizxAiTools.mainView";
 
 const SECTION_ORDER_KEY = "fhizxAiTools.sectionOrder";
+const SECTION_OPEN_STATE_KEY = "fhizxAiTools.sectionOpenState";
 const DEFAULT_SECTION_ORDER = [
   "utils",
   "notes",
@@ -48,7 +49,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly cloudService: CloudSyncService,
-  ) {}
+  ) { }
 
   setContext(context: vscode.ExtensionContext): void {
     this._context = context;
@@ -57,6 +58,19 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
   private _getSectionOrder(): string[] {
     const saved = this._context?.globalState.get<string[]>(SECTION_ORDER_KEY);
     return saved && saved.length > 0 ? saved : [...DEFAULT_SECTION_ORDER];
+  }
+
+  private _getSectionOpenState(): Record<string, boolean> {
+    return (
+      this._context?.globalState.get<Record<string, boolean>>(
+        SECTION_OPEN_STATE_KEY,
+      ) || {}
+    );
+  }
+
+  // Sections default to open unless the user explicitly closed them before.
+  private _isSectionOpen(id: string): boolean {
+    return this._getSectionOpenState()[id] !== false;
   }
 
   resolveWebviewView(
@@ -286,7 +300,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         p.id as CategoryType,
       );
       sectionMap[p.id] = `
-        <div class="accordion-section open" data-section="${p.id}" draggable="true">
+        <div class="accordion-section${this._isSectionOpen(p.id) ? " open" : ""}" data-section="${p.id}" draggable="true">
           <div class="accordion-header">
             <span class="accordion-chevron">▶</span>
             <span class="accordion-title">${p.label}</span>
@@ -309,7 +323,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       </div>`;
 
     sectionMap["utils"] = `
-      <div class="accordion-section open" data-section="utils" draggable="true">
+      <div class="accordion-section${this._isSectionOpen("utils") ? " open" : ""}" data-section="utils" draggable="true">
         <div class="accordion-header">
           <span class="accordion-chevron">▶</span>
           <span class="accordion-title">Utils</span>
@@ -514,6 +528,12 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       case "checkForUpdates":
         void vscode.commands.executeCommand(COMMANDS.CHECK_FOR_UPDATES);
         break;
+      case "installDevExtensions":
+        void vscode.commands.executeCommand(COMMANDS.INSTALL_DEV_EXTENSIONS);
+        break;
+      case "installDevStyle":
+        void vscode.commands.executeCommand(COMMANDS.INSTALL_DEV_STYLE);
+        break;
       case "cloudConnect":
         void vscode.commands.executeCommand(COMMANDS.CLOUD_CONNECT);
         break;
@@ -536,6 +556,17 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
             SECTION_ORDER_KEY,
             (msg as any).order,
           );
+        }
+        break;
+
+      case "saveSectionState":
+        if (
+          typeof (msg as any).section === "string" &&
+          typeof (msg as any).open === "boolean"
+        ) {
+          const state = this._getSectionOpenState();
+          state[(msg as any).section] = (msg as any).open;
+          void this._context?.globalState.update(SECTION_OPEN_STATE_KEY, state);
         }
         break;
 

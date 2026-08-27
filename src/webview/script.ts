@@ -20,7 +20,14 @@ export function getScript(): string {
       const header = e.target.closest('.accordion-header');
       if (header && !e.target.closest('.icon-btn')) {
         const section = header.closest('.accordion-section');
-        if (section) section.classList.toggle('open');
+        if (section) {
+          section.classList.toggle('open');
+          vscode.postMessage({
+            type: 'saveSectionState',
+            section: section.dataset.section,
+            open: section.classList.contains('open'),
+          });
+        }
         return;
       }
 

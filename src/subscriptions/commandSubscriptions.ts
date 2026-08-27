@@ -7,6 +7,7 @@ import { FileManagerService } from "../services/fileManagerService";
 import { InstallationService } from "../services/installationService";
 import { CloudSyncService } from "../services/cloudSyncService";
 import { exportToPdf } from "../services/pdfExportService";
+import { DevelopmentEnvironmentService } from "../services/developmentEnvironmentService";
 import {
   CATEGORIES,
   COMMANDS,
@@ -173,6 +174,51 @@ export function registerCommands(
         exportToPdf(filePath);
       },
     ),
+
+    vscode.commands.registerCommand(
+      COMMANDS.INSTALL_DEV_EXTENSIONS,
+      async () => {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "Instalando extensiones de desarrollo…",
+          },
+          async (progress) => {
+            try {
+              const { installed, skipped, omitted, cancelled } =
+                await DevelopmentEnvironmentService.installExtensions(progress);
+              const message = cancelled
+                ? "Instalación cancelada."
+                : `Extensiones instaladas: ${installed}. Ya estaban instaladas: ${skipped}. No seleccionadas: ${omitted}.`;
+              vscode.window.showInformationMessage(message);
+            } catch (error) {
+              notifyFsError(
+                "No se pudieron instalar las extensiones de desarrollo",
+                error,
+              );
+            }
+          },
+        );
+      },
+    ),
+
+    vscode.commands.registerCommand(COMMANDS.INSTALL_DEV_STYLE, async () => {
+      const confirm = await vscode.window.showWarningMessage(
+        "Esto sobrescribirá tu configuración de VS Code (settings.json) con el estilo personalizado. ¿Deseas continuar?",
+        { modal: true },
+        "Aplicar Estilo",
+      );
+      if (confirm !== "Aplicar Estilo") return;
+
+      try {
+        await DevelopmentEnvironmentService.applyStyle();
+        vscode.window.showInformationMessage(
+          "Estilo de desarrollo aplicado correctamente.",
+        );
+      } catch (error) {
+        notifyFsError("No se pudo aplicar el estilo de desarrollo", error);
+      }
+    }),
 
     // Generadores dinámicos para comandos específicos
     ...categories.flatMap((cat) => {
@@ -417,10 +463,10 @@ export function registerCommands(
                   : null;
               })
               .filter(Boolean) as {
-              path: string;
-              sha: string;
-              version: string;
-            }[];
+                path: string;
+                sha: string;
+                version: string;
+              }[];
 
             if (parsed.length === 0) {
               vscode.window.showInformationMessage(

@@ -2,7 +2,7 @@
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
   "description": "Gestiona prompts, agents, skills, context y notas para herramientas de IA",
-  "version": "1.5.5",
+  "version": "1.6.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -200,6 +200,16 @@
         "command": "fhizxAiTools.exportToPdf",
         "title": "Guardar como PDF",
         "icon": "$(file-pdf)"
+      },
+      {
+        "command": "fhizxAiTools.installDevExtensions",
+        "title": "FhizxAITools: Instalar Extensiones de Desarrollo",
+        "icon": "$(extensions)"
+      },
+      {
+        "command": "fhizxAiTools.installDevStyle",
+        "title": "FhizxAITools: Instalar Estilo de Desarrollo",
+        "icon": "$(paintcan)"
       }
     ],
     "menus": {

@@ -171,11 +171,37 @@ export function getStyles(): string {
     .file-picker-item:hover {
       background: var(--vscode-list-hoverBackground);
     }
+    .file-picker-item.loading {
+      background: var(--vscode-list-activeSelectionBackground);
+      color: var(--vscode-list-activeSelectionForeground);
+    }
     .file-picker-item.hidden { display: none; }
+
+    .token-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      min-height: 82px;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+    }
+    .token-loading::before {
+      content: "";
+      width: 13px;
+      height: 13px;
+      border: 2px solid var(--vscode-descriptionForeground);
+      border-top-color: var(--vscode-focusBorder);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     /* ── Action Buttons (icon buttons in headers) ── */
@@ -223,6 +249,19 @@ export function getStyles(): string {
     .item.selected {
       background: var(--vscode-list-activeSelectionBackground);
       color: var(--vscode-list-activeSelectionForeground);
+    }
+    .item.loading {
+      opacity: 0.65;
+    }
+    .item.loading::after {
+      content: "";
+      width: 11px;
+      height: 11px;
+      border: 2px solid var(--vscode-descriptionForeground);
+      border-top-color: var(--vscode-focusBorder);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
     }
 
     .item-icon {

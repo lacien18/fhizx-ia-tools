@@ -9,6 +9,8 @@ import {
   renderCategoryPanel,
   renderConfigPanel,
   renderTokenPanel,
+  renderTokenStats,
+  type TokenStats,
 } from "./htmlGenerators";
 import {
   CATEGORIES,
@@ -34,6 +36,14 @@ const SECTION_OPEN_STATE_KEY = "fhizxAiTools.sectionOpenState";
 const FOLDER_OPEN_STATE_KEY = "fhizxAiTools.folderOpenState";
 const ACTIVE_TAB_KEY = "fhizxAiTools.activeTab";
 type ActiveTab = "tokens" | "config";
+type GlobalFile = { name: string; path: string };
+
+interface TokenStatsCacheEntry {
+  mtimeMs: number;
+  size: number;
+  stats: TokenStats;
+}
+
 const DEFAULT_SECTION_ORDER = [
   "utils",
   "notes",
@@ -50,6 +60,9 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
   private _fileWatcherDisposables: vscode.Disposable[] = [];
   private _context!: vscode.ExtensionContext;
   private _selectedTokenFile?: string;
+  private _globalFilesCache?: { root: string; files: GlobalFile[] };
+  private _tokenStatsCache = new Map<string, TokenStatsCacheEntry>();
+  private _tokenRequestId = 0;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -195,6 +208,9 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
   refresh(): void {
     if (!this._view) return;
 
+    this._globalFilesCache = undefined;
+    this._tokenStatsCache.clear();
+
     const panels: Record<string, string> = {};
     const globalPath = getGlobalPathConfig();
     const folderOpenState = this._getFolderOpenState();
@@ -271,53 +287,107 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       fileName = path.basename(editor.document.fileName);
     }
 
-    const charCount = text.length;
-    const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
-    const lineCount = text.split("\n").length;
-
-    let exactTokens = 0;
-    try {
-      exactTokens = encoder.encode(text).length;
-    } catch {
-      exactTokens = Math.ceil(charCount / 4);
-    }
-
-    const costs = [
-      {
-        model: "GPT-4o",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O).toFixed(5)}`,
-      },
-      {
-        model: "GPT-4o Mini",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O_MINI).toFixed(5)}`,
-      },
-      {
-        model: "Claude 3.5 Sonnet",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.CLAUDE_SONNET).toFixed(5)}`,
-      },
-      {
-        model: "Gemini Flash",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GEMINI_FLASH).toFixed(5)}`,
-      },
-    ];
-
-    return renderTokenPanel(
-      {
-        fileName,
-        tokens: exactTokens,
-        characters: charCount,
-        words: wordCount,
-        lines: lineCount,
-        costs,
-      },
-      this._getGlobalFiles(),
-    );
+    return renderTokenPanel(this._calculateTokenStats(fileName, text), this._getGlobalFiles());
   }
 
-  private _getGlobalFiles(): { name: string; path: string }[] {
+  private _calculateTokenStats(fileName: string, text: string): TokenStats {
+    const characters = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const lines = text.split("\n").length;
+
+    let tokens = 0;
+    try {
+      tokens = encoder.encode(text).length;
+    } catch {
+      tokens = Math.ceil(characters / 4);
+    }
+
+    return {
+      fileName,
+      tokens,
+      characters,
+      words,
+      lines,
+      costs: [
+        {
+          model: "GPT-4o",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O).toFixed(5)}`,
+        },
+        {
+          model: "GPT-4o Mini",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O_MINI).toFixed(5)}`,
+        },
+        {
+          model: "Claude 3.5 Sonnet",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.CLAUDE_SONNET).toFixed(5)}`,
+        },
+        {
+          model: "Gemini Flash",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.GEMINI_FLASH).toFixed(5)}`,
+        },
+      ],
+    };
+  }
+
+  private async _selectTokenFile(filePath: string): Promise<void> {
+    this._selectedTokenFile = filePath;
+    const requestId = ++this._tokenRequestId;
+
+    if (!this._view) return;
+    void this._view.webview.postMessage({
+      type: "tokenStatsLoading",
+      path: filePath,
+    });
+
+    try {
+      const [text, fileStat] = await Promise.all([
+        fs.promises.readFile(filePath, "utf-8"),
+        fs.promises.stat(filePath),
+      ]);
+      if (requestId !== this._tokenRequestId) return;
+
+      const cached = this._tokenStatsCache.get(filePath);
+      const stats =
+        cached && cached.mtimeMs === fileStat.mtimeMs && cached.size === fileStat.size
+          ? cached.stats
+          : await this._calculateTokenStatsAsync(path.basename(filePath), text);
+
+      if (!cached || cached.mtimeMs !== fileStat.mtimeMs || cached.size !== fileStat.size) {
+        this._tokenStatsCache.set(filePath, {
+          mtimeMs: fileStat.mtimeMs,
+          size: fileStat.size,
+          stats,
+        });
+      }
+
+      if (requestId !== this._tokenRequestId) return;
+      void this._view?.webview.postMessage({
+        type: "updateTokenStats",
+        path: filePath,
+        html: renderTokenStats(stats),
+      });
+    } catch {
+      if (requestId !== this._tokenRequestId) return;
+      this._updateTokenPanel();
+    }
+  }
+
+  private async _calculateTokenStatsAsync(
+    fileName: string,
+    text: string,
+  ): Promise<TokenStats> {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    return this._calculateTokenStats(fileName, text);
+  }
+
+  private _getGlobalFiles(): GlobalFile[] {
     const globalPath = getGlobalPathConfig();
     if (!globalPath) return [];
-    const files: { name: string; path: string }[] = [];
+    if (this._globalFilesCache?.root === globalPath) {
+      return this._globalFilesCache.files;
+    }
+
+    const files: GlobalFile[] = [];
     const walk = (dir: string) => {
       try {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -333,6 +403,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       }
     };
     walk(globalPath);
+    this._globalFilesCache = { root: globalPath, files };
     return files;
   }
 
@@ -435,9 +506,20 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
     switch (msg.type) {
       case "openFile":
         if (msg.path) {
-          void vscode.commands.executeCommand(
-            COMMANDS.OPEN_FILE,
-            vscode.Uri.file(msg.path),
+          const filePath = msg.path;
+          void vscode.window.showTextDocument(vscode.Uri.file(filePath)).then(
+            () => {
+              void this._view?.webview.postMessage({
+                type: "fileOpened",
+                path: filePath,
+              });
+            },
+            () => {
+              void this._view?.webview.postMessage({
+                type: "fileOpenFailed",
+                path: filePath,
+              });
+            },
           );
         }
         break;
@@ -654,12 +736,12 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
       case "selectFileForTokens":
         if (msg.path) {
-          this._selectedTokenFile = msg.path;
-          this._updateTokenPanel();
+          void this._selectTokenFile(msg.path);
         }
         break;
 
       case "clearTokenFile":
+        this._tokenRequestId++;
         this._selectedTokenFile = undefined;
         this._updateTokenPanel();
         break;

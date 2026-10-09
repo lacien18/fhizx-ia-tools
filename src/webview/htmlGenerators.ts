@@ -243,31 +243,18 @@ export function renderDevPanel(): string {
 /**
  * Render token counter panel HTML.
  */
-export function renderTokenPanel(
-  stats: {
-    fileName: string;
-    tokens: number;
-    characters: number;
-    words: number;
-    lines: number;
-    costs: { model: string; cost: string }[];
-  } | null,
-  files: { name: string; path: string }[] = [],
-): string {
-  const fileListHtml = `
-    <div class="config-card" style="margin-bottom:8px;">
-      <div class="config-card-title">Seleccionar archivo</div>
-      <input class="search-input" id="token-file-search" type="text" placeholder="Buscar archivo..." />
-      <ul class="file-picker-list" id="token-file-list">
-        ${files.map((f) => `<li class="file-picker-item" data-path="${escapeHtml(f.path)}">${escapeHtml(f.name)}</li>`).join("")}
-      </ul>
-      ${stats ? `<button class="btn secondary" style="margin-top:6px;width:100%;" data-action="clearTokenFile">Usar archivo activo del editor</button>` : ""}
-    </div>
-  `;
+export interface TokenStats {
+  fileName: string;
+  tokens: number;
+  characters: number;
+  words: number;
+  lines: number;
+  costs: { model: string; cost: string }[];
+}
 
+export function renderTokenStats(stats: TokenStats | null): string {
   if (!stats) {
     return `
-      ${fileListHtml}
       <div class="empty-state">
         <div class="empty-state-icon">📊</div>
         <div class="empty-state-text">Selecciona un archivo o abre uno en el editor.</div>
@@ -276,7 +263,6 @@ export function renderTokenPanel(
   }
 
   return `
-    ${fileListHtml}
     <div class="config-card" style="margin-bottom:8px;">
       <div class="config-card-title" style="opacity:0.6; font-size:11px;">Archivo</div>
       <div class="config-card-desc" style="opacity:1; font-weight:500;">${escapeHtml(stats.fileName)}</div>
@@ -307,5 +293,33 @@ export function renderTokenPanel(
         ${stats.costs.map((c) => `<li class="cost-item"><span class="cost-model">${escapeHtml(c.model)}</span><span class="cost-value">${c.cost}</span></li>`).join("")}
       </ul>
     </div>
+  `;
+}
+
+export function renderTokenPanel(
+  stats: TokenStats | null,
+  files: { name: string; path: string }[] = [],
+): string {
+  const fileListHtml = `
+    <div class="config-card" style="margin-bottom:8px;">
+      <div class="config-card-title">Seleccionar archivo</div>
+      <input class="search-input" id="token-file-search" type="text" placeholder="Buscar archivo..." />
+      <ul class="file-picker-list" id="token-file-list">
+        ${files.map((f) => `<li class="file-picker-item" data-path="${escapeHtml(f.path)}">${escapeHtml(f.name)}</li>`).join("")}
+      </ul>
+      ${stats ? `<button class="btn secondary" style="margin-top:6px;width:100%;" data-action="clearTokenFile">Usar archivo activo del editor</button>` : ""}
+    </div>
+  `;
+
+  if (!stats) {
+    return `
+      ${fileListHtml}
+      <div id="token-stats">${renderTokenStats(null)}</div>
+    `;
+  }
+
+  return `
+    ${fileListHtml}
+    <div id="token-stats">${renderTokenStats(stats)}</div>
   `;
 }

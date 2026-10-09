@@ -18,6 +18,16 @@ export function getScript(): string {
       vscode.setState({ ...state, ...patch });
     }
 
+    let loadingFilePath = null;
+
+    function clearFileLoadingState() {
+      document.querySelectorAll('.item.loading').forEach(item => {
+        item.classList.remove('loading');
+        item.removeAttribute('aria-busy');
+      });
+      loadingFilePath = null;
+    }
+
     // ── Tab switching ──
     document.addEventListener('click', (e) => {
       const contextMenu = document.getElementById('context-menu');
@@ -86,6 +96,10 @@ export function getScript(): string {
       // File click (open)
       const fileItem = e.target.closest('.item[data-type="file"]');
       if (fileItem && !e.target.closest('.icon-btn')) {
+        clearFileLoadingState();
+        loadingFilePath = fileItem.dataset.path;
+        fileItem.classList.add('loading');
+        fileItem.setAttribute('aria-busy', 'true');
         vscode.postMessage({ type: 'openFile', path: fileItem.dataset.path });
         return;
       }
@@ -115,6 +129,12 @@ export function getScript(): string {
       // File picker item click
       const pickerItem = e.target.closest('.file-picker-item');
       if (pickerItem && pickerItem.dataset.path) {
+        document.querySelectorAll('.file-picker-item.loading').forEach(item => item.classList.remove('loading'));
+        pickerItem.classList.add('loading');
+        const stats = document.getElementById('token-stats');
+        if (stats) {
+          stats.innerHTML = '<div class="token-loading" role="status" aria-live="polite">Calculando estadísticas...</div>';
+        }
         vscode.postMessage({ type: 'selectFileForTokens', path: pickerItem.dataset.path });
         return;
       }
@@ -304,7 +324,18 @@ export function getScript(): string {
     // ── Messages from extension ──
     window.addEventListener('message', (event) => {
       const msg = event.data;
-      if (msg.type === 'update') {
+      if (msg.type === 'fileOpened' || msg.type === 'fileOpenFailed') {
+        if (msg.path === loadingFilePath) clearFileLoadingState();
+      } else if (msg.type === 'tokenStatsLoading') {
+        const stats = document.getElementById('token-stats');
+        if (stats) {
+          stats.innerHTML = '<div class="token-loading" role="status" aria-live="polite">Calculando estadísticas...</div>';
+        }
+      } else if (msg.type === 'updateTokenStats') {
+        const stats = document.getElementById('token-stats');
+        if (stats) stats.innerHTML = msg.html;
+        document.querySelectorAll('.file-picker-item.loading').forEach(item => item.classList.remove('loading'));
+      } else if (msg.type === 'update') {
         const panel = document.getElementById('panel-' + msg.panel) || document.getElementById('tab-' + msg.panel);
         if (panel) panel.innerHTML = msg.html;
       } else if (msg.type === 'updateAll') {

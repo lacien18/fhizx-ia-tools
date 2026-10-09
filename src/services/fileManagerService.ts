@@ -11,6 +11,8 @@ import {
 } from "../constants";
 import {
   isDirectory,
+  isCategoryFileName,
+  normalizeCategoryFilePath,
   safeReadFile,
   stripCategoryFileExtension,
 } from "../utils/fsUtils";
@@ -41,20 +43,32 @@ export class FileManagerService {
     return undefined;
   }
 
-  findFileRecursive(dir: string, name: string): string | null {
+  findFileRecursive(
+    dir: string,
+    name: string,
+    category: CategoryType,
+  ): string | null {
     if (!fs.existsSync(dir)) return null;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        const found = this.findFileRecursive(fullPath, name);
+        const found = this.findFileRecursive(fullPath, name, category);
         if (found) return found;
-      } else if (
-        entry.isFile() &&
-        (entry.name === name ||
-          stripCategoryFileExtension(entry.name) === name)
-      ) {
-        return fullPath;
+      } else if (entry.isFile()) {
+        const normalizedPath = normalizeCategoryFilePath(fullPath, category);
+        if (!normalizedPath) continue;
+
+        const normalizedName = path.basename(normalizedPath);
+        if (!isCategoryFileName(normalizedName, category)) continue;
+
+        const requestedBaseName = stripCategoryFileExtension(name);
+        if (
+          normalizedName === name ||
+          stripCategoryFileExtension(normalizedName) === requestedBaseName
+        ) {
+          return normalizedPath;
+        }
       }
     }
     return null;

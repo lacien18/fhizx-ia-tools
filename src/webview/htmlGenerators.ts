@@ -11,7 +11,10 @@ import {
   ENCODING_NAME,
   type CategoryType,
 } from "../constants";
-import { isCategoryFileName } from "../utils/fsUtils";
+import {
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+} from "../utils/fsUtils";
 
 export interface FileEntry {
   name: string;
@@ -45,12 +48,18 @@ export function buildFileTree(
           isInstalled: false,
           children: buildFileTree(fullPath, category),
         });
-      } else if (entry.isFile() && validateExtension(entry.name, category)) {
+      } else if (entry.isFile()) {
+        const normalizedPath = normalizeCategoryFilePath(fullPath, category);
+        if (!normalizedPath) continue;
+
+        const normalizedName = path.basename(normalizedPath);
+        if (!validateExtension(normalizedName, category)) continue;
+
         items.push({
-          name: entry.name,
-          path: fullPath,
+          name: normalizedName,
+          path: normalizedPath,
           isFolder: false,
-          isInstalled: InstallationService.isInstalled(entry.name, category),
+          isInstalled: InstallationService.isInstalled(normalizedName, category),
         });
       }
     }

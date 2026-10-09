@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as path from "path";
 import {
   CATEGORY_FILE_EXTENSIONS,
   FILE_EXTENSIONS,
@@ -60,9 +61,56 @@ export function isCategoryFileName(
   return true;
 }
 
+export function normalizeCategoryFileName(
+  fileName: string,
+  category: CategoryType,
+): string {
+  if (isCategoryFileName(fileName, category)) return fileName;
+
+  const baseName = stripCategoryFileExtension(fileName);
+  const normalizedBaseName =
+    baseName !== fileName || !path.extname(fileName)
+      ? baseName
+      : fileName.slice(0, -path.extname(fileName).length);
+  return `${normalizedBaseName}${CATEGORY_FILE_EXTENSIONS[category]}`;
+}
+
+export function normalizeCategoryFilePath(
+  filePath: string,
+  category: CategoryType,
+): string | undefined {
+  const fileName = path.basename(filePath);
+  if (fileName.startsWith(".")) return filePath;
+
+  const normalizedName = normalizeCategoryFileName(fileName, category);
+  if (normalizedName === fileName) return filePath;
+
+  const extension = CATEGORY_FILE_EXTENSIONS[category];
+  const baseName = normalizedName.slice(0, -extension.length);
+  let normalizedPath = path.join(path.dirname(filePath), normalizedName);
+  let suffix = 2;
+
+  while (fs.existsSync(normalizedPath)) {
+    normalizedPath = path.join(
+      path.dirname(filePath),
+      `${baseName}-${suffix}${extension}`,
+    );
+    suffix += 1;
+  }
+
+  try {
+    fs.renameSync(filePath, normalizedPath);
+    return normalizedPath;
+  } catch (error) {
+    console.error(`FhizxAITools: Error al normalizar "${filePath}"`, error);
+    return undefined;
+  }
+}
+
 export function stripCategoryFileExtension(fileName: string): string {
+  const lowerCaseFileName = fileName.toLowerCase();
   const extension = CATEGORY_EXTENSIONS.find((candidate) =>
-    fileName.endsWith(candidate),
+    lowerCaseFileName.endsWith(candidate),
   );
   return extension
     ? fileName.slice(0, -extension.length)

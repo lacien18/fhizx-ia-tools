@@ -8,6 +8,8 @@ import {
   safeReadFile,
   deletePath,
   isCategoryFileName,
+  normalizeCategoryFileName,
+  normalizeCategoryFilePath,
   stripCategoryFileExtension,
   toPromptFileName,
 } from "../src/utils/fsUtils";
@@ -126,6 +128,49 @@ describe("fsUtils ==>", () => {
       const result = isCategoryFileName(fileName, "notes");
       // Assert
       expect(result).toBe(false);
+    });
+  });
+
+  describe("Data test ==> normalize category extensions", () => {
+    it("Given a generic Markdown file in skills, When normalizing its name, Then adds the skill suffix", () => {
+      // Arrange
+      const input = "mi-habilidad.md";
+      // Act
+      const result = normalizeCategoryFileName(input, "skills");
+      // Assert
+      expect(result).toBe("mi-habilidad.skill.md");
+    });
+
+    it("Given a text file in skills, When normalizing its name, Then replaces its extension with the skill suffix", () => {
+      // Arrange
+      const input = "mi-habilidad.txt";
+      // Act
+      const result = normalizeCategoryFileName(input, "skills");
+      // Assert
+      expect(result).toBe("mi-habilidad.skill.md");
+    });
+
+    it("Given a skill file in notes, When normalizing its name, Then changes it to a Markdown note", () => {
+      // Arrange
+      const input = "mi-nota.skill.md";
+      // Act
+      const result = normalizeCategoryFileName(input, "notes");
+      // Assert
+      expect(result).toBe("mi-nota.md");
+    });
+
+    it("Given a file with an incorrect extension, When normalizing its path, Then renames it without overwriting an existing file", () => {
+      // Arrange
+      const sourcePath = path.join(tmpDir, "mi-prompt.md");
+      const existingPath = path.join(tmpDir, "mi-prompt.prompt.md");
+      fs.writeFileSync(sourcePath, "contenido original");
+      fs.writeFileSync(existingPath, "contenido existente");
+      // Act
+      const result = normalizeCategoryFilePath(sourcePath, "prompts");
+      // Assert
+      expect(result).toBe(path.join(tmpDir, "mi-prompt-2.prompt.md"));
+      expect(fs.readFileSync(result!, "utf-8")).toBe("contenido original");
+      expect(fs.readFileSync(existingPath, "utf-8")).toBe("contenido existente");
     });
   });
 

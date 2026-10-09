@@ -26,6 +26,10 @@ import {
 import { InstallationService } from "../services/installationService";
 import { CloudSyncService } from "../services/cloudSyncService";
 import { getGlobalPathConfig } from "../utils/resourceUtils";
+import {
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+} from "../utils/fsUtils";
 
 const encoder = getEncoding(ENCODING_NAME);
 
@@ -409,8 +413,27 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         for (const entry of entries) {
           const full = path.join(dir, entry.name);
           if (entry.isDirectory()) walk(full);
-          else if (entry.name.endsWith(".md")) {
-            files.push({ name: path.relative(globalPath, full), path: full });
+          else if (entry.isFile()) {
+            const relativePath = path.relative(globalPath, full);
+            const category = CATEGORIES.find(
+              (candidate) =>
+                relativePath.split(path.sep)[0] === candidate,
+            );
+
+            if (category) {
+              const normalizedPath = normalizeCategoryFilePath(full, category);
+              if (!normalizedPath) continue;
+
+              const normalizedName = path.basename(normalizedPath);
+              if (!isCategoryFileName(normalizedName, category)) continue;
+
+              files.push({
+                name: path.relative(globalPath, normalizedPath),
+                path: normalizedPath,
+              });
+            } else if (entry.name.endsWith(".md")) {
+              files.push({ name: relativePath, path: full });
+            }
           }
         }
       } catch {

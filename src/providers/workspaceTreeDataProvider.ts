@@ -8,7 +8,10 @@ import {
   CONFIG_KEYS,
   type CategoryType,
 } from "../constants";
-import { isCategoryFileName } from "../utils/fsUtils";
+import {
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+} from "../utils/fsUtils";
 
 export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -39,9 +42,9 @@ export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
 
       for (const entry of entries) {
         const fullPath = path.join(targetPath, entry.name);
-        const uri = vscode.Uri.file(fullPath);
 
         if (entry.isDirectory()) {
+          const uri = vscode.Uri.file(fullPath);
           items.push(
             new WorkspaceItem(
               entry.name,
@@ -52,14 +55,24 @@ export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
               false,
             ),
           );
-        } else if (entry.isFile() && this.validateExtension(entry.name)) {
+        } else if (entry.isFile()) {
+          const normalizedPath = normalizeCategoryFilePath(
+            fullPath,
+            this.category,
+          );
+          if (!normalizedPath) continue;
+
+          const normalizedName = path.basename(normalizedPath);
+          if (!this.validateExtension(normalizedName)) continue;
+
+          const uri = vscode.Uri.file(normalizedPath);
           const isInstalled = InstallationService.isInstalled(
-            entry.name,
+            normalizedName,
             this.category,
           );
           items.push(
             new WorkspaceItem(
-              entry.name,
+              normalizedName,
               uri,
               vscode.TreeItemCollapsibleState.None,
               false,

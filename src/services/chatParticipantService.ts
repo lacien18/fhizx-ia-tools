@@ -3,7 +3,11 @@ import * as fs from "fs";
 import * as path from "path";
 import { FileManagerService } from "./fileManagerService";
 import { CHAT_PARTICIPANT_ID, COPILOT_CATEGORIES } from "../constants";
-import { safeReadFile } from "../utils/fsUtils";
+import {
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+  safeReadFile,
+} from "../utils/fsUtils";
 import { getGlobalPathConfig } from "../utils/resourceUtils";
 
 export function registerChatParticipant(
@@ -36,7 +40,12 @@ export function registerChatParticipant(
             fileNames = fs
               .readdirSync(catDir, { withFileTypes: true })
               .filter((entry) => entry.isFile())
-              .map((entry) => entry.name)
+              .map((entry) =>
+                normalizeCategoryFilePath(path.join(catDir, entry.name), cat),
+              )
+              .filter((filePath): filePath is string => Boolean(filePath))
+              .map((filePath) => path.basename(filePath))
+              .filter((name) => isCategoryFileName(name, cat))
               .filter((name) => !filter || name.toLowerCase().includes(filter))
               .sort();
           } catch {
@@ -69,6 +78,7 @@ export function registerChatParticipant(
           promptFilePath = fileManager.findFileRecursive(
             path.join(globalPath, cat),
             promptName,
+            cat,
           );
           if (promptFilePath) break;
         }

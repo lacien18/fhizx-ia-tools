@@ -17,7 +17,13 @@ import {
   COPILOT_CATEGORIES,
   capitalizeCategory,
 } from "../constants";
-import { fileExists, deletePath, safeReadFile } from "../utils/fsUtils";
+import {
+  deletePath,
+  fileExists,
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+  safeReadFile,
+} from "../utils/fsUtils";
 import {
   ensureGlobalStructure,
   getGlobalPathConfig,
@@ -236,6 +242,14 @@ export function registerCommands(
     }),
 
     vscode.commands.registerCommand(
+      COMMANDS.CREATE_VOICE_NOTE,
+      (transcript?: unknown) => {
+        if (typeof transcript !== "string") return;
+        return fileManager.createVoiceNote(transcript, refreshAll);
+      },
+    ),
+
+    vscode.commands.registerCommand(
       COMMANDS.CREATE_FILE_CONTEXT,
       (node: WorkspaceItem) =>
         fileManager.createNewFile("prompts", refreshAll, node),
@@ -349,14 +363,24 @@ export function registerCommands(
           const entries = fs.readdirSync(catDir, { withFileTypes: true });
           for (const entry of entries) {
             if (!entry.isFile()) continue;
+
+            const normalizedPath = normalizeCategoryFilePath(
+              path.join(catDir, entry.name),
+              cat,
+            );
+            if (!normalizedPath) continue;
+
+            const normalizedName = path.basename(normalizedPath);
+            if (!isCategoryFileName(normalizedName, cat)) continue;
+
             candidates.push(
               new WorkspaceItem(
-                entry.name,
-                vscode.Uri.file(path.join(catDir, entry.name)),
+                normalizedName,
+                vscode.Uri.file(normalizedPath),
                 vscode.TreeItemCollapsibleState.None,
                 false,
                 cat,
-                InstallationService.isInstalled(entry.name, cat),
+                InstallationService.isInstalled(normalizedName, cat),
               ),
             );
           }

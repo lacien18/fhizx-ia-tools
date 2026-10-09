@@ -9,6 +9,8 @@ import {
   renderCategoryPanel,
   renderConfigPanel,
   renderTokenPanel,
+  renderTokenStats,
+  type TokenStats,
 } from "./htmlGenerators";
 import {
   CATEGORIES,
@@ -24,6 +26,10 @@ import {
 import { InstallationService } from "../services/installationService";
 import { CloudSyncService } from "../services/cloudSyncService";
 import { getGlobalPathConfig } from "../utils/resourceUtils";
+import {
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+} from "../utils/fsUtils";
 
 const encoder = getEncoding(ENCODING_NAME);
 
@@ -31,20 +37,45 @@ export const MAIN_WEBVIEW_ID = "fhizxAiTools.mainView";
 
 const SECTION_ORDER_KEY = "fhizxAiTools.sectionOrder";
 const SECTION_OPEN_STATE_KEY = "fhizxAiTools.sectionOpenState";
+const FOLDER_OPEN_STATE_KEY = "fhizxAiTools.folderOpenState";
+const ACTIVE_TAB_KEY = "fhizxAiTools.activeTab";
+type ActiveTab = "tokens" | "config";
+type GlobalFile = { name: string; path: string };
+
+interface TokenStatsCacheEntry {
+  mtimeMs: number;
+  size: number;
+  stats: TokenStats;
+}
+
 const DEFAULT_SECTION_ORDER = [
   "utils",
   "notes",
   "agents",
   "skills",
   "prompts",
+  "instructions",
   "context",
 ] as const;
+
+const CATEGORY_DESCRIPTIONS: Partial<Record<CategoryType, string>> = {
+  prompts: "Crea y ejecuta prompts guardados en tu espacio global desde el chat de Copilot.",
+  agents: "Gestiona agentes de IA guardados en tu espacio global para definir roles e instrucciones detalladas.",
+  skills: "Organiza skills reutilizables por dominio o tarea para flujos de trabajo complejos.",
+  instructions: "Define instrucciones reutilizables para aplicar reglas y comportamientos específicos en Copilot.",
+  context: "Gestiona archivos de contexto reutilizables para enriquecer las respuestas de tus asistentes de IA.",
+};
 
 export class MainWebviewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private _disposables: vscode.Disposable[] = [];
+  private _fileWatcher?: vscode.FileSystemWatcher;
+  private _fileWatcherDisposables: vscode.Disposable[] = [];
   private _context!: vscode.ExtensionContext;
   private _selectedTokenFile?: string;
+  private _globalFilesCache?: { root: string; files: GlobalFile[] };
+  private _tokenStatsCache = new Map<string, TokenStatsCacheEntry>();
+  private _tokenRequestId = 0;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -53,11 +84,46 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
   setContext(context: vscode.ExtensionContext): void {
     this._context = context;
+    context.subscriptions.push(
+      new vscode.Disposable(() => this._disposeFileWatcher()),
+    );
+  }
+
+  private _restartFileWatcher(): void {
+    this._disposeFileWatcher();
+
+    const globalPath = getGlobalPathConfig();
+    if (!globalPath) return;
+
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(globalPath, "**"),
+    );
+    const refresh = () => this.refresh();
+
+    this._fileWatcher = watcher;
+    this._fileWatcherDisposables = [
+      watcher.onDidCreate(refresh),
+      watcher.onDidChange(refresh),
+      watcher.onDidDelete(refresh),
+    ];
+  }
+
+  private _disposeFileWatcher(): void {
+    this._fileWatcherDisposables.forEach((disposable) => disposable.dispose());
+    this._fileWatcherDisposables = [];
+    this._fileWatcher?.dispose();
+    this._fileWatcher = undefined;
   }
 
   private _getSectionOrder(): string[] {
     const saved = this._context?.globalState.get<string[]>(SECTION_ORDER_KEY);
-    return saved && saved.length > 0 ? saved : [...DEFAULT_SECTION_ORDER];
+    if (!saved || saved.length === 0) return [...DEFAULT_SECTION_ORDER];
+
+    const savedSections = new Set(saved);
+    return [
+      ...saved,
+      ...DEFAULT_SECTION_ORDER.filter((section) => !savedSections.has(section)),
+    ];
   }
 
   private _getSectionOpenState(): Record<string, boolean> {
@@ -66,6 +132,19 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         SECTION_OPEN_STATE_KEY,
       ) || {}
     );
+  }
+
+  private _getFolderOpenState(): Record<string, boolean> {
+    return (
+      this._context?.globalState.get<Record<string, boolean>>(
+        FOLDER_OPEN_STATE_KEY,
+      ) || {}
+    );
+  }
+
+  private _getActiveTab(): ActiveTab {
+    const saved = this._context?.globalState.get<string>(ACTIVE_TAB_KEY);
+    return saved === "config" ? "config" : "tokens";
   }
 
   // Sections default to open unless the user explicitly closed them before.
@@ -79,6 +158,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
     _token: vscode.CancellationToken,
   ): void {
     this._view = webviewView;
+    this._restartFileWatcher();
 
     webviewView.webview.options = {
       enableScripts: true,
@@ -98,6 +178,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
     vscode.workspace.onDidChangeConfiguration(
       (e) => {
         if (e.affectsConfiguration(CONFIG_NAMESPACE)) {
+          this._restartFileWatcher();
           this.refresh();
         }
       },
@@ -124,7 +205,17 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       this._disposables,
     );
 
+    webviewView.onDidChangeVisibility(
+      () => {
+        if (webviewView.visible) this.refresh();
+      },
+      undefined,
+      this._disposables,
+    );
+
     webviewView.onDidDispose(() => {
+      if (this._view === webviewView) this._view = undefined;
+      this._disposeFileWatcher();
       this._disposables.forEach((d) => d.dispose());
       this._disposables = [];
     });
@@ -136,13 +227,17 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
   refresh(): void {
     if (!this._view) return;
 
+    this._globalFilesCache = undefined;
+    this._tokenStatsCache.clear();
+
     const panels: Record<string, string> = {};
     const globalPath = getGlobalPathConfig();
+    const folderOpenState = this._getFolderOpenState();
 
     for (const cat of CATEGORIES) {
       const catPath = globalPath ? path.join(globalPath, cat) : "";
       const items = catPath ? buildFileTree(catPath, cat) : [];
-      panels[cat] = renderCategoryPanel(items, cat);
+      panels[cat] = renderCategoryPanel(items, cat, folderOpenState);
     }
 
     panels["config"] = this._buildConfigHtml();
@@ -211,61 +306,134 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       fileName = path.basename(editor.document.fileName);
     }
 
-    const charCount = text.length;
-    const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
-    const lineCount = text.split("\n").length;
-
-    let exactTokens = 0;
-    try {
-      exactTokens = encoder.encode(text).length;
-    } catch {
-      exactTokens = Math.ceil(charCount / 4);
-    }
-
-    const costs = [
-      {
-        model: "GPT-4o",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O).toFixed(5)}`,
-      },
-      {
-        model: "GPT-4o Mini",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O_MINI).toFixed(5)}`,
-      },
-      {
-        model: "Claude 3.5 Sonnet",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.CLAUDE_SONNET).toFixed(5)}`,
-      },
-      {
-        model: "Gemini Flash",
-        cost: `$${((exactTokens / TOKENS_PER_MILLION) * MODEL_PRICES.GEMINI_FLASH).toFixed(5)}`,
-      },
-    ];
-
-    return renderTokenPanel(
-      {
-        fileName,
-        tokens: exactTokens,
-        characters: charCount,
-        words: wordCount,
-        lines: lineCount,
-        costs,
-      },
-      this._getGlobalFiles(),
-    );
+    return renderTokenPanel(this._calculateTokenStats(fileName, text), this._getGlobalFiles());
   }
 
-  private _getGlobalFiles(): { name: string; path: string }[] {
+  private _calculateTokenStats(fileName: string, text: string): TokenStats {
+    const characters = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const lines = text.split("\n").length;
+
+    let tokens = 0;
+    try {
+      tokens = encoder.encode(text).length;
+    } catch {
+      tokens = Math.ceil(characters / 4);
+    }
+
+    return {
+      fileName,
+      tokens,
+      characters,
+      words,
+      lines,
+      costs: [
+        {
+          model: "GPT-4o",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O).toFixed(5)}`,
+        },
+        {
+          model: "GPT-4o Mini",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.GPT_4O_MINI).toFixed(5)}`,
+        },
+        {
+          model: "Claude 3.5 Sonnet",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.CLAUDE_SONNET).toFixed(5)}`,
+        },
+        {
+          model: "Gemini Flash",
+          cost: `$${((tokens / TOKENS_PER_MILLION) * MODEL_PRICES.GEMINI_FLASH).toFixed(5)}`,
+        },
+      ],
+    };
+  }
+
+  private async _selectTokenFile(filePath: string): Promise<void> {
+    this._selectedTokenFile = filePath;
+    const requestId = ++this._tokenRequestId;
+
+    if (!this._view) return;
+    void this._view.webview.postMessage({
+      type: "tokenStatsLoading",
+      path: filePath,
+    });
+
+    try {
+      const [text, fileStat] = await Promise.all([
+        fs.promises.readFile(filePath, "utf-8"),
+        fs.promises.stat(filePath),
+      ]);
+      if (requestId !== this._tokenRequestId) return;
+
+      const cached = this._tokenStatsCache.get(filePath);
+      const stats =
+        cached && cached.mtimeMs === fileStat.mtimeMs && cached.size === fileStat.size
+          ? cached.stats
+          : await this._calculateTokenStatsAsync(path.basename(filePath), text);
+
+      if (!cached || cached.mtimeMs !== fileStat.mtimeMs || cached.size !== fileStat.size) {
+        this._tokenStatsCache.set(filePath, {
+          mtimeMs: fileStat.mtimeMs,
+          size: fileStat.size,
+          stats,
+        });
+      }
+
+      if (requestId !== this._tokenRequestId) return;
+      void this._view?.webview.postMessage({
+        type: "updateTokenStats",
+        path: filePath,
+        html: renderTokenStats(stats),
+      });
+    } catch {
+      if (requestId !== this._tokenRequestId) return;
+      this._updateTokenPanel();
+    }
+  }
+
+  private async _calculateTokenStatsAsync(
+    fileName: string,
+    text: string,
+  ): Promise<TokenStats> {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    return this._calculateTokenStats(fileName, text);
+  }
+
+  private _getGlobalFiles(): GlobalFile[] {
     const globalPath = getGlobalPathConfig();
     if (!globalPath) return [];
-    const files: { name: string; path: string }[] = [];
+    if (this._globalFilesCache?.root === globalPath) {
+      return this._globalFilesCache.files;
+    }
+
+    const files: GlobalFile[] = [];
     const walk = (dir: string) => {
       try {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const entry of entries) {
           const full = path.join(dir, entry.name);
           if (entry.isDirectory()) walk(full);
-          else if (entry.name.endsWith(".md")) {
-            files.push({ name: path.relative(globalPath, full), path: full });
+          else if (entry.isFile()) {
+            const relativePath = path.relative(globalPath, full);
+            const category = CATEGORIES.find(
+              (candidate) =>
+                relativePath.split(path.sep)[0] === candidate,
+            );
+
+            if (category) {
+              const normalizedPath = normalizeCategoryFilePath(full, category);
+              if (!normalizedPath) continue;
+
+              const normalizedName = path.basename(normalizedPath);
+              if (!isCategoryFileName(normalizedName, category)) continue;
+
+              files.push({
+                name: path.relative(globalPath, normalizedPath),
+                path: normalizedPath,
+              });
+            } else if (entry.name.endsWith(".md")) {
+              files.push({ name: relativePath, path: full });
+            }
           }
         }
       } catch {
@@ -273,21 +441,28 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       }
     };
     walk(globalPath);
+    this._globalFilesCache = { root: globalPath, files };
     return files;
   }
 
   private _getFullHtml(): string {
     const globalPath = getGlobalPathConfig();
+    const folderOpenState = this._getFolderOpenState();
 
     // Build initial panels
     const categoryPanels = CATEGORIES.map((cat) => {
       const catPath = globalPath ? path.join(globalPath, cat) : "";
       const items = catPath ? buildFileTree(catPath, cat) : [];
-      const content = renderCategoryPanel(items, cat);
+      const content = renderCategoryPanel(items, cat, folderOpenState);
 
       const categoryLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
 
-      return { id: cat, label: categoryLabel, content };
+      return {
+        id: cat,
+        label: categoryLabel,
+        description: CATEGORY_DESCRIPTIONS[cat],
+        content,
+      };
     });
 
     const configContent = this._buildConfigHtml();
@@ -307,19 +482,21 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
             <div class="accordion-actions">${headerActions}</div>
           </div>
           <div class="accordion-body">
+            ${p.description ? `<div class="accordion-description">${p.description}</div>` : ""}
             <div class="accordion-content" id="panel-${p.id}">${p.content}</div>
           </div>
         </div>`;
     }
 
+    const activeTab = this._getActiveTab();
     const tabsHtml = `
       <div class="bottom-tabs">
         <div class="tab-bar">
-          <button class="tab active" data-tab="tokens">Tokens</button>
-          <button class="tab" data-tab="config">Config</button>
+          <button class="tab${activeTab === "tokens" ? " active" : ""}" data-tab="tokens">Tokens</button>
+          <button class="tab${activeTab === "config" ? " active" : ""}" data-tab="config">Config</button>
         </div>
-        <div class="tab-panel active" id="tab-tokens">${tokenContent}</div>
-        <div class="tab-panel" id="tab-config">${configContent}</div>
+        <div class="tab-panel${activeTab === "tokens" ? " active" : ""}" id="tab-tokens">${tokenContent}</div>
+        <div class="tab-panel${activeTab === "config" ? " active" : ""}" id="tab-config">${configContent}</div>
       </div>`;
 
     sectionMap["utils"] = `
@@ -358,8 +535,12 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
   }
 
   private _getCategoryHeaderActions(category: CategoryType): string {
-    const cap = category.charAt(0).toUpperCase() + category.slice(1);
+    const voiceNoteAction = category === "notes"
+      ? `<button class="icon-btn" data-action="createVoiceNote" data-category="notes" title="Crear nota por voz" aria-label="Crear nota por voz">🎙</button><span id="voice-note-status" class="voice-note-status" role="status" aria-live="polite"></span>`
+      : "";
+
     return `
+      ${voiceNoteAction}
       <button class="icon-btn" data-action="createFile" data-category="${category}" title="Crear archivo">📄</button>
       <button class="icon-btn" data-action="createFolder" data-category="${category}" title="Crear carpeta">📁</button>
     `;
@@ -369,13 +550,26 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
     type: string;
     path?: string;
     category?: string;
+    transcript?: string;
+    error?: string;
   }): Promise<void> {
     switch (msg.type) {
       case "openFile":
         if (msg.path) {
-          void vscode.commands.executeCommand(
-            COMMANDS.OPEN_FILE,
-            vscode.Uri.file(msg.path),
+          const filePath = msg.path;
+          void vscode.window.showTextDocument(vscode.Uri.file(filePath)).then(
+            () => {
+              void this._view?.webview.postMessage({
+                type: "fileOpened",
+                path: filePath,
+              });
+            },
+            () => {
+              void this._view?.webview.postMessage({
+                type: "fileOpenFailed",
+                path: filePath,
+              });
+            },
           );
         }
         break;
@@ -425,6 +619,61 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
             `fhizxAiTools.create${catFile.charAt(0).toUpperCase() + catFile.slice(1)}File`,
           );
         }
+        break;
+
+      case "createVoiceNote":
+        if (typeof msg.transcript === "string") {
+          void vscode.commands.executeCommand(
+            COMMANDS.CREATE_VOICE_NOTE,
+            msg.transcript,
+          );
+        }
+        break;
+
+      case "voiceNoteUnavailable":
+        void vscode.window.showWarningMessage(
+          "El dictado por voz no está disponible en esta versión de VS Code.",
+        );
+        break;
+
+      case "voiceNoteError":
+        if (msg.error === "microphone-unavailable") {
+          void vscode.window.showWarningMessage(
+            "Este entorno de VS Code no permite solicitar acceso al micrófono.",
+          );
+          break;
+        }
+
+        if (
+          msg.error === "not-allowed" ||
+          msg.error === "NotAllowedError" ||
+          msg.error === "SecurityError"
+        ) {
+          const permissionMessage = process.platform === "darwin"
+            ? "El dictado de la webview fue rechazado por VS Code/Electron. Recarga la ventana y, si continúa, habilita Visual Studio Code en Ajustes del Sistema > Privacidad y seguridad > Micrófono."
+            : process.platform === "win32"
+              ? "El dictado de la webview fue rechazado por VS Code/Electron. Recarga la ventana y, si continúa, activa el acceso para aplicaciones de escritorio y Visual Studio Code en Configuración > Privacidad y seguridad > Micrófono."
+              : "El dictado de la webview fue rechazado por VS Code/Electron. Recarga la ventana y revisa los permisos de privacidad del sistema.";
+          void vscode.window.showWarningMessage(permissionMessage);
+          break;
+        }
+
+        if (msg.error === "audio-capture") {
+          void vscode.window.showWarningMessage(
+            "VS Code no pudo capturar audio. Selecciona un micrófono disponible en la configuración de entrada de audio del sistema y vuelve a intentarlo.",
+          );
+          break;
+        }
+
+        void vscode.window.showWarningMessage(
+          "No se pudo completar el dictado por voz.",
+        );
+        break;
+
+      case "voiceNoteEmpty":
+        void vscode.window.showInformationMessage(
+          "No se detectó contenido en el dictado.",
+        );
         break;
 
       case "createFolder":
@@ -570,14 +819,34 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         }
         break;
 
+      case "saveFolderState":
+        if (
+          typeof msg.path === "string" &&
+          typeof (msg as any).open === "boolean"
+        ) {
+          const state = this._getFolderOpenState();
+          state[msg.path] = (msg as any).open;
+          void this._context?.globalState.update(FOLDER_OPEN_STATE_KEY, state);
+        }
+        break;
+
+      case "saveTabState":
+        if ((msg as any).tab === "tokens" || (msg as any).tab === "config") {
+          void this._context?.globalState.update(
+            ACTIVE_TAB_KEY,
+            (msg as any).tab,
+          );
+        }
+        break;
+
       case "selectFileForTokens":
         if (msg.path) {
-          this._selectedTokenFile = msg.path;
-          this._updateTokenPanel();
+          void this._selectTokenFile(msg.path);
         }
         break;
 
       case "clearTokenFile":
+        this._tokenRequestId++;
         this._selectedTokenFile = undefined;
         this._updateTokenPanel();
         break;

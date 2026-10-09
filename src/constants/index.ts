@@ -5,6 +5,7 @@ export const CATEGORIES = [
   "prompts",
   "agents",
   "skills",
+  "instructions",
   "context",
   "notes",
 ] as const;
@@ -15,6 +16,7 @@ export const COPILOT_CATEGORIES = [
   "prompts",
   "agents",
   "skills",
+  "instructions",
   "context",
 ] as const;
 
@@ -22,6 +24,7 @@ export const FILE_PREFIXES: Record<CategoryType, string> = {
   prompts: "p-",
   agents: "a-",
   skills: "s-",
+  instructions: "i-",
   context: "c-",
   notes: "",
 } as const;
@@ -55,6 +58,7 @@ export const COMMANDS = {
   TOGGLE_INSTALL: "fhizxAiTools.toggleInstall",
   OPEN_GLOBAL_PATH: "fhizxAiTools.openGlobalPath",
   COPY_TO_CLIPBOARD: "fhizxAiTools.copyToClipboard",
+  CREATE_VOICE_NOTE: "fhizxAiTools.createVoiceNote",
   CREATE_FILE_CONTEXT: "fhizxAiTools.createFileContext",
   CREATE_FOLDER_CONTEXT: "fhizxAiTools.createFolderContext",
   RENAME_ITEM: "fhizxAiTools.renameItem",
@@ -83,6 +87,19 @@ export const COMMAND_PREFIX = {
 export const FILE_EXTENSIONS = {
   MARKDOWN: ".md",
   PROMPT_MD: ".prompt.md",
+  AGENT_MD: ".agent.md",
+  SKILL_MD: ".skill.md",
+  INSTRUCTIONS_MD: ".instructions.md",
+  CONTEXT_MD: ".context.md",
+} as const;
+
+export const CATEGORY_FILE_EXTENSIONS: Record<CategoryType, string> = {
+  prompts: FILE_EXTENSIONS.PROMPT_MD,
+  agents: FILE_EXTENSIONS.AGENT_MD,
+  skills: FILE_EXTENSIONS.SKILL_MD,
+  instructions: FILE_EXTENSIONS.INSTRUCTIONS_MD,
+  context: FILE_EXTENSIONS.CONTEXT_MD,
+  notes: FILE_EXTENSIONS.MARKDOWN,
 } as const;
 
 export const ICONS = {

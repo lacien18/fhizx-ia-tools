@@ -5,11 +5,17 @@ import { WorkspaceItem } from "../models/workspaceItemModel";
 import { WorkspaceTreeDataProvider } from "../providers/workspaceTreeDataProvider";
 import {
   FILE_PREFIXES,
-  FILE_EXTENSIONS,
+  CATEGORY_FILE_EXTENSIONS,
   CATEGORIES,
   type CategoryType,
 } from "../constants";
-import { isDirectory, safeReadFile, toPromptFileName } from "../utils/fsUtils";
+import {
+  isDirectory,
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+  safeReadFile,
+  stripCategoryFileExtension,
+} from "../utils/fsUtils";
 import { getGlobalPathConfig, notifyFsError } from "../utils/resourceUtils";
 import { CloudSyncService } from "./cloudSyncService";
 
@@ -37,21 +43,32 @@ export class FileManagerService {
     return undefined;
   }
 
-  findFileRecursive(dir: string, name: string): string | null {
+  findFileRecursive(
+    dir: string,
+    name: string,
+    category: CategoryType,
+  ): string | null {
     if (!fs.existsSync(dir)) return null;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        const found = this.findFileRecursive(fullPath, name);
+        const found = this.findFileRecursive(fullPath, name, category);
         if (found) return found;
-      } else if (
-        entry.isFile() &&
-        (entry.name === name ||
-          (entry.name.endsWith(FILE_EXTENSIONS.PROMPT_MD) &&
-            entry.name.slice(0, -FILE_EXTENSIONS.PROMPT_MD.length) === name))
-      ) {
-        return fullPath;
+      } else if (entry.isFile()) {
+        const normalizedPath = normalizeCategoryFilePath(fullPath, category);
+        if (!normalizedPath) continue;
+
+        const normalizedName = path.basename(normalizedPath);
+        if (!isCategoryFileName(normalizedName, category)) continue;
+
+        const requestedBaseName = stripCategoryFileExtension(name);
+        if (
+          normalizedName === name ||
+          stripCategoryFileExtension(normalizedName) === requestedBaseName
+        ) {
+          return normalizedPath;
+        }
       }
     }
     return null;
@@ -65,6 +82,8 @@ export class FileManagerService {
         return `# Agent: ${rawName}\n\n## Rol y Propósito\n[Define quién es este agente]\n\n## Instrucciones\n- Regla 1\n`;
       case "skills":
         return `# Skill: ${rawName}\n\n## Objetivo\n[Describe la habilidad]\n\n## Pasos\n1. Paso inicial...\n`;
+      case "instructions":
+        return `# Instruction: ${rawName}\n\n## Aplicación\n[Describe cuándo debe aplicarse esta instrucción]\n\n## Reglas\n- Regla 1\n`;
       case "context":
         return `# Context: ${rawName}\n\n## Propósito\n[Describe qué contexto aporta este archivo]\n\n## Información Relevante\n- Dato 1\n`;
       case "notes":
@@ -72,6 +91,64 @@ export class FileManagerService {
       default:
         return `# ${rawName}\n`;
     }
+  }
+
+  async createVoiceNote(
+    transcript: string,
+    refreshAll: () => void,
+  ): Promise<void> {
+    try {
+      const content = transcript.trim();
+      if (!content) {
+        vscode.window.showWarningMessage("No se detectó contenido en el dictado.");
+        return;
+      }
+
+      const basePath = this.providers.notes.getGlobalCategoryPath() || "";
+      if (!basePath) {
+        vscode.window.showWarningMessage(
+          "Configura la ruta global haciendo clic en el icono de configuración.",
+        );
+        return;
+      }
+
+      fs.mkdirSync(basePath, { recursive: true });
+      const baseName = this.getVoiceNoteBaseName(content);
+      const filePath = this.getUniqueVoiceNotePath(basePath, baseName);
+      const noteContent = `# Nota por voz\n\n${content}\n`;
+
+      fs.writeFileSync(filePath, noteContent, "utf-8");
+      refreshAll();
+      this.cloudService?.scheduleExplicitPush();
+      void vscode.window.showTextDocument(vscode.Uri.file(filePath));
+    } catch (error) {
+      notifyFsError("No se pudo crear la nota por voz", error);
+    }
+  }
+
+  private getVoiceNoteBaseName(content: string): string {
+    const slug = content
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48)
+      .replace(/-+$/g, "");
+
+    return slug ? `nota-${slug}` : `nota-${Date.now()}`;
+  }
+
+  private getUniqueVoiceNotePath(basePath: string, baseName: string): string {
+    let filePath = path.join(basePath, `${baseName}.md`);
+    let suffix = 2;
+
+    while (fs.existsSync(filePath)) {
+      filePath = path.join(basePath, `${baseName}-${suffix}.md`);
+      suffix += 1;
+    }
+
+    return filePath;
   }
 
   async createNewFile(
@@ -103,14 +180,8 @@ export class FileManagerService {
       });
       if (!name) return;
 
-      const isNote = category === "notes";
-      const extension = isNote
-        ? FILE_EXTENSIONS.MARKDOWN
-        : FILE_EXTENSIONS.PROMPT_MD;
-
-      let cleanName = name.trim();
-      if (cleanName.endsWith(extension))
-        cleanName = cleanName.slice(0, -extension.length);
+      const extension = CATEGORY_FILE_EXTENSIONS[category];
+      const cleanName = stripCategoryFileExtension(name.trim());
 
       const prefixForfile = FILE_PREFIXES[category] || "";
 

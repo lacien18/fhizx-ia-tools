@@ -1,5 +1,14 @@
 import * as fs from "fs";
-import { FILE_EXTENSIONS } from "../constants";
+import * as path from "path";
+import {
+  CATEGORY_FILE_EXTENSIONS,
+  FILE_EXTENSIONS,
+  type CategoryType,
+} from "../constants";
+
+const CATEGORY_EXTENSIONS = Object.values(CATEGORY_FILE_EXTENSIONS).sort(
+  (first, second) => second.length - first.length,
+);
 
 /**
  * Utilidades puras de sistema de archivos (sin dependencias de VS Code),
@@ -35,20 +44,90 @@ export function deletePath(filePath: string, recursive: boolean): void {
   }
 }
 
+export function isCategoryFileName(
+  fileName: string,
+  category: CategoryType,
+): boolean {
+  const expectedExtension = CATEGORY_FILE_EXTENSIONS[category];
+  if (!fileName.endsWith(expectedExtension)) return false;
+
+  if (category === "notes") {
+    return !CATEGORY_EXTENSIONS.some(
+      (extension) =>
+        extension !== FILE_EXTENSIONS.MARKDOWN && fileName.endsWith(extension),
+    );
+  }
+
+  return true;
+}
+
+export function normalizeCategoryFileName(
+  fileName: string,
+  category: CategoryType,
+): string {
+  if (isCategoryFileName(fileName, category)) return fileName;
+
+  const baseName = stripCategoryFileExtension(fileName);
+  const normalizedBaseName =
+    baseName !== fileName || !path.extname(fileName)
+      ? baseName
+      : fileName.slice(0, -path.extname(fileName).length);
+  return `${normalizedBaseName}${CATEGORY_FILE_EXTENSIONS[category]}`;
+}
+
+export function normalizeCategoryFilePath(
+  filePath: string,
+  category: CategoryType,
+): string | undefined {
+  const fileName = path.basename(filePath);
+  if (fileName.startsWith(".")) return filePath;
+
+  const normalizedName = normalizeCategoryFileName(fileName, category);
+  if (normalizedName === fileName) return filePath;
+
+  const extension = CATEGORY_FILE_EXTENSIONS[category];
+  const baseName = normalizedName.slice(0, -extension.length);
+  let normalizedPath = path.join(path.dirname(filePath), normalizedName);
+  let suffix = 2;
+
+  while (fs.existsSync(normalizedPath)) {
+    normalizedPath = path.join(
+      path.dirname(filePath),
+      `${baseName}-${suffix}${extension}`,
+    );
+    suffix += 1;
+  }
+
+  try {
+    fs.renameSync(filePath, normalizedPath);
+    return normalizedPath;
+  } catch (error) {
+    console.error(`FhizxAITools: Error al normalizar "${filePath}"`, error);
+    return undefined;
+  }
+}
+
+export function stripCategoryFileExtension(fileName: string): string {
+  const lowerCaseFileName = fileName.toLowerCase();
+  const extension = CATEGORY_EXTENSIONS.find((candidate) =>
+    lowerCaseFileName.endsWith(candidate),
+  );
+  return extension
+    ? fileName.slice(0, -extension.length)
+    : fileName;
+}
+
 /**
  * Convierte un nombre de archivo al equivalente `.prompt.md` para Copilot.
  * - "p-ejemplo.prompt.md"          -> "p-ejemplo.prompt.md"
+ * - "a-ejemplo.agent.md"           -> "a-ejemplo.prompt.md"
+ * - "s-ejemplo.skill.md"           -> "s-ejemplo.prompt.md"
  * - "p-ejemplo.instructions.md"    -> "p-ejemplo.prompt.md"
+ * - "c-ejemplo.context.md"         -> "c-ejemplo.prompt.md"
  * - "p-ejemplo.md"                 -> "p-ejemplo.prompt.md"
  * - "p-ejemplo"                    -> "p-ejemplo.prompt.md"
  */
 export function toPromptFileName(fileName: string): string {
-  if (fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)) return fileName;
-  let baseName = fileName;
-  if (baseName.endsWith(".instructions.md")) {
-    baseName = baseName.slice(0, -".instructions.md".length);
-  } else if (baseName.endsWith(FILE_EXTENSIONS.MARKDOWN)) {
-    baseName = baseName.slice(0, -FILE_EXTENSIONS.MARKDOWN.length);
-  }
+  const baseName = stripCategoryFileExtension(fileName);
   return `${baseName}${FILE_EXTENSIONS.PROMPT_MD}`;
 }

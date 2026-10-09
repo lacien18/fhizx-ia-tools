@@ -12,11 +12,11 @@ Tipo: Extensión de Visual Studio Code (TypeScript, CommonJS, target ES2022, VS 
 
 ### Propósito
 
-**Fhizx AI Tools Manager** es una extensión de VS Code que centraliza, organiza y gestiona el ecosistema personal de herramientas de Inteligencia Artificial de un desarrollador directamente desde el editor. Resuelve el problema de dispersión de prompts, agents, skills, contextos y notas que normalmente se guardan en ubicaciones arbitrarias del disco, sin convenciones ni visibilidad.
+**Fhizx AI Tools Manager** es una extensión de VS Code que centraliza, organiza y gestiona el ecosistema personal de herramientas de Inteligencia Artificial de un desarrollador directamente desde el editor. Resuelve el problema de dispersión de prompts, agents, skills, instructions, contextos y notas que normalmente se guardan en ubicaciones arbitrarias del disco, sin convenciones ni visibilidad.
 
 El valor principal de la extensión se divide en cinco frentes:
 
-1. **Espacio global personalizable**: define una ruta única (configuración `fhizxAiTools.globalPath`) que almacena las categorías `prompts`, `agents`, `skills`, `context` y `notes`, accesible desde cualquier proyecto.
+1. **Espacio global personalizable**: define una ruta única (configuración `fhizxAiTools.globalPath`) que almacena las categorías `prompts`, `agents`, `skills`, `instructions`, `context` y `notes`, accesible desde cualquier proyecto.
 2. **Integración con GitHub Copilot**: permite instalar y desinstalar recursos copiándolos a `~/.vscode/github-copilot/<categoria>/` (con conversión automática a `.prompt.md`) y registrándolos en `chat.promptFilesLocations`, de modo que Copilot los consuma como prompt files.
 3. **Chat Participant `@fhizx-ai-tools`**: expone los recursos dentro del chat de Copilot mediante los comandos `usar <nombre>` (carga contenido recursivamente) y `listar [filtro]`.
 4. **Panel único (webview) "FhizxAITools"**: reemplaza las antiguas vistas de árbol; un solo panel con secciones plegables por categoría, exportación a PDF, copia de seguridad en la nube (GitHub) y una sección "Utils" con contador de tokens, configuración y aprovisionamiento de un entorno de desarrollo (extensiones + estilo visual de VS Code).
@@ -27,13 +27,13 @@ El valor principal de la extensión se divide en cinco frentes:
 | Termino | Definicion |
 | :--- | :--- |
 | **Ruta Global** | Carpeta raiz definida en `fhizxAiTools.globalPath` donde viven las categorias de recursos. Sin ella la extension queda en estado de onboarding. |
-| **Categoria** | Tipo de recurso gestionado: `prompts`, `agents`, `skills`, `context`, `notes`. Es la unidad de organizacion del espacio global. |
-| **Categoria Copilot** | Subconjunto instalable en Copilot: `prompts`, `agents`, `skills`, `context` (se excluye `notes`). |
-| **Recurso** | Archivo o carpeta dentro de una categoria. Los archivos usan extension `.prompt.md` salvo `notes`, que usa `.md`. |
+| **Categoria** | Tipo de recurso gestionado: `prompts`, `agents`, `skills`, `instructions`, `context`, `notes`. Es la unidad de organizacion del espacio global. |
+| **Categoria Copilot** | Subconjunto instalable en Copilot: `prompts`, `agents`, `skills`, `instructions`, `context` (se excluye `notes`). |
+| **Recurso** | Archivo o carpeta dentro de una categoria. Los archivos usan `.prompt.md` (prompts), `.agent.md` (agents), `.skill.md` (skills), `.instructions.md` (instructions), `.context.md` (context) o `.md` (notes). |
 | **Instalacion en Copilot** | Copia de un recurso a `~/.vscode/github-copilot/<categoria>/` con nombre normalizado a `.prompt.md` y registro en `chat.promptFilesLocations`. |
 | **Prompt File** | Archivo de instrucciones que Copilot carga como prompt de archivo; se declara en `chat.promptFilesLocations`. |
 | **Boilerplate** | Plantilla Markdown generada automaticamente al crear un archivo nuevo, especifica por categoria. |
-| **Prefijo de nombre** | Convencion aplicada por categoria: `p-` (prompts), `a-` (agents), `s-` (skills), `c-` (context), sin prefijo en notes. |
+| **Prefijo de nombre** | Convencion aplicada por categoria: `p-` (prompts), `a-` (agents), `s-` (skills), `i-` (instructions), `c-` (context), sin prefijo en notes. |
 | **WorkspaceItem** | Modelo de item usado como parametro tipado en los comandos (representa un archivo o carpeta). Desde el webview se construyen objetos planos con la misma forma (duck typing), ya no proviene de un `TreeDataProvider` registrado. |
 | **Estado de instalacion** | Indicador por archivo: instalado (bullet lleno) o pendiente (bullet vacio); deriva de `InstallationService.isInstalled`. |
 | **Webview Unificado** | `MainWebviewProvider` (`fhizxAiTools.mainView`), unica vista contribuida; renderiza HTML/CSS/JS propios (sin frameworks) y se comunica con la extension via `postMessage`. |
@@ -59,7 +59,7 @@ El valor principal de la extensión se divide en cinco frentes:
 
 ### Casos de Uso Principales (Happy Path)
 
-- **UC-01 Configurar ruta global**: el usuario selecciona una carpeta con un dialog (`showOpenDialog`), se guarda en `fhizxAiTools.globalPath` (Global), se crea la estructura `prompts/agents/skills/context/notes` (`ensureGlobalStructure`) y se refresca el webview completo (`MainWebviewProvider.refresh()`).
+- **UC-01 Configurar ruta global**: el usuario selecciona una carpeta con un dialog (`showOpenDialog`), se guarda en `fhizxAiTools.globalPath` (Global), se crea la estructura `prompts/agents/skills/instructions/context/notes` (`ensureGlobalStructure`) y se refresca el webview completo (`MainWebviewProvider.refresh()`).
 - **UC-02 Explorar recursos**: al construir o refrescar el HTML, `buildFileTree` lee de forma sincrona y recursiva el directorio de cada categoria (`readdirSync`), filtra por extension valida, calcula estado de instalacion y devuelve un arbol ordenado (carpetas primero, luego alfabetico) que se renderiza como acordeon con subcarpetas colapsables en el cliente.
 - **UC-03 Crear archivo con boilerplate**: se pide el nombre (`showInputBox`), se valida que no exista, se normaliza extension y prefijo, se escribe la plantilla (`getBoilerplateContent`) y se abre el archivo en el editor. Disparado desde los botones de cabecera de cada seccion del acordeon (`data-action="createFile"`).
 - **UC-04 Crear carpeta**: idem, disparado desde el boton de cabecera de la seccion (`data-action="createFolder"`).
@@ -71,7 +71,7 @@ El valor principal de la extensión se divide en cinco frentes:
 - **UC-10 Instalar en Copilot**: copia el recurso a `~/.vscode/github-copilot/<categoria>/` con nombre normalizado a `.prompt.md` y registra el directorio en `chat.promptFilesLocations`.
 - **UC-11 Desinstalar de Copilot**: elimina el archivo del directorio Copilot.
 - **UC-12 Alternar instalacion (toggle)**: desde un item concreto del panel (menu contextual) o desde el boton "Instalar / Desinstalar en Copilot" de la pestaña Config, que abre un QuickPick con todos los recursos instalables y su estado.
-- **UC-13 Chat participant `usar <nombre>`**: busqueda recursiva por nombre (con tolerancia a extension) en las cuatro categorias Copilot, lectura segura y renderizado en Markdown.
+- **UC-13 Chat participant `usar <nombre>`**: busqueda recursiva por nombre (con tolerancia a extension) en las cinco categorias Copilot, lectura segura y renderizado en Markdown.
 - **UC-14 Chat participant `listar [filtro]`**: listado por categoria de los archivos de primer nivel que coincidan con el filtro.
 - **UC-15 Panel de Tokens**: estadisticas del archivo activo del editor por defecto (tokens exactos con `cl100k_base`, caracteres, palabras, lineas y costo estimado por cuatro modelos); incluye un selector con buscador que lista **todos** los `.md`/`.prompt.md` de la ruta global para fijar un archivo especifico distinto al activo (`selectFileForTokens` / `clearTokenFile`).
 - **UC-16 Abrir ruta global en el sistema**: `revealFileInOS` (crea la ruta si no existe); boton en la pestaña Config.
@@ -203,7 +203,7 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 | `fsUtils` | `src/utils/fsUtils.ts` | Utilidades puras de FS sin dependencias de VS Code: `fileExists`, `isDirectory`, `safeReadFile`, `deletePath`, `toPromptFileName`. |
 | `resourceUtils` | `src/utils/resourceUtils.ts` | Utilidades con API de VS Code: `getGlobalPathConfig`, `ensureGlobalStructure`, `resolveResourceFilePath`, `notifyFsError`. |
 | `cloudUtils` | `src/utils/cloudUtils.ts` | `collectLocalFiles`, `diffLocalVsRemote`, `toPosixRelativePath`; puras y testeadas (`test/cloudUtils.test.ts`). |
-| `constants` | `src/constants/index.ts` | Centraliza constantes, tipos derivados (`CategoryType`) y helpers (`capitalizeCategory`). Aun conserva `VIEW_IDS` para las cinco categorias + `TOKEN_COUNTER`/`CONFIGURATIONS`, que ya no se usan como IDs de vista real. |
+| `constants` | `src/constants/index.ts` | Centraliza constantes, tipos derivados (`CategoryType`) y helpers (`capitalizeCategory`). Aun conserva `VIEW_IDS` para las categorias antiguas + `TOKEN_COUNTER`/`CONFIGURATIONS`, que ya no se usan como IDs de vista real. |
 
 ### Dependencias Criticas
 
@@ -272,8 +272,8 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **Constantes**: todo valor repetido vive en `src/constants/index.ts`; no duplicar strings magicos en services ni en el webview.
 - **Tipos derivados**: exportar tipos (`CategoryType`) desde `constants` y no redefinirlos.
 - **Estructura de carpetas**: `src/providers/` (parcialmente en desuso, ver deuda tecnica), `src/services/` (dominio), `src/models/` (modelos), `src/subscriptions/` (comandos), `src/utils/` (utilidades), `src/webview/` (UI unica: provider + generadores HTML + script cliente + estilos), `src/constants/`, `test/`.
-- **Extension de archivos**: recursos instalables `.prompt.md`; notes `.md`; conversion con `toPromptFileName`.
-- **Prefijos de categoria**: `p-`, `a-`, `s-`, `c-` y sin prefijo para notes.
+- **Extension de archivos**: recursos instalables `.prompt.md`; instructions `.instructions.md`; notes `.md`; conversion con `toPromptFileName`.
+- **Prefijos de categoria**: `p-`, `a-`, `s-`, `i-`, `c-` y sin prefijo para notes.
 - **HTML del webview**: se genera con template strings interpolados (no hay motor de plantillas); todo texto dinamico proveniente del sistema de archivos debe pasar por `escapeHtml` antes de interpolarse.
 - **Idioma**: mensajes de usuario en espanol; codigo y comentarios en ingles donde sea idiomático; tests con Given/When/Then en ingles.
 - **Tests**: vitest ^2 (vitest 4 no resuelve con `@types/node` 18); `npm test` = `vitest run`.

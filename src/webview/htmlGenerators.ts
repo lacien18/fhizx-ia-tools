@@ -6,12 +6,15 @@ import {
   COPILOT_CATEGORIES,
   CONFIG_NAMESPACE,
   CONFIG_KEYS,
-  FILE_EXTENSIONS,
   MODEL_PRICES,
   TOKENS_PER_MILLION,
   ENCODING_NAME,
   type CategoryType,
 } from "../constants";
+import {
+  isCategoryFileName,
+  normalizeCategoryFilePath,
+} from "../utils/fsUtils";
 
 export interface FileEntry {
   name: string;
@@ -45,12 +48,18 @@ export function buildFileTree(
           isInstalled: false,
           children: buildFileTree(fullPath, category),
         });
-      } else if (entry.isFile() && validateExtension(entry.name, category)) {
+      } else if (entry.isFile()) {
+        const normalizedPath = normalizeCategoryFilePath(fullPath, category);
+        if (!normalizedPath) continue;
+
+        const normalizedName = path.basename(normalizedPath);
+        if (!validateExtension(normalizedName, category)) continue;
+
         items.push({
-          name: entry.name,
-          path: fullPath,
+          name: normalizedName,
+          path: normalizedPath,
           isFolder: false,
-          isInstalled: InstallationService.isInstalled(entry.name, category),
+          isInstalled: InstallationService.isInstalled(normalizedName, category),
         });
       }
     }
@@ -65,13 +74,7 @@ export function buildFileTree(
 }
 
 function validateExtension(fileName: string, category: CategoryType): boolean {
-  if (category === "notes") {
-    return (
-      fileName.endsWith(FILE_EXTENSIONS.MARKDOWN) &&
-      !fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)
-    );
-  }
-  return fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD);
+  return isCategoryFileName(fileName, category);
 }
 
 function escapeHtml(s: string): string {
@@ -88,6 +91,7 @@ function escapeHtml(s: string): string {
 export function renderCategoryPanel(
   items: FileEntry[],
   category: CategoryType,
+  folderOpenState: Record<string, boolean> = {},
 ): string {
   if (items.length === 0) {
     return `
@@ -98,21 +102,28 @@ export function renderCategoryPanel(
     `;
   }
 
-  return `<ul class="item-list">${items.map((item) => renderItem(item, category)).join("")}</ul>`;
+  return `<ul class="item-list">${items.map((item) => renderItem(item, category, folderOpenState)).join("")}</ul>`;
 }
 
-function renderItem(item: FileEntry, category: CategoryType): string {
+function renderItem(
+  item: FileEntry,
+  category: CategoryType,
+  folderOpenState: Record<string, boolean>,
+): string {
   const escapedPath = escapeHtml(item.path);
   const escapedName = escapeHtml(item.name);
 
   if (item.isFolder) {
+    const isOpen = folderOpenState[item.path] === true;
     const childrenHtml = item.children
-      ? item.children.map((c) => renderItem(c, category)).join("")
+      ? item.children
+          .map((c) => renderItem(c, category, folderOpenState))
+          .join("")
       : "";
     return `
       <li>
         <div class="item" data-type="folder" data-path="${escapedPath}" data-category="${category}">
-          <span class="chevron">▸</span>
+          <span class="chevron">${isOpen ? "▾" : "▸"}</span>
           <span class="item-icon folder">📁</span>
           <span class="item-label">${escapedName}</span>
           <div class="item-actions">
@@ -120,7 +131,7 @@ function renderItem(item: FileEntry, category: CategoryType): string {
             <button class="icon-btn" data-action="createFolderContext" data-category="${category}" title="Crear carpeta">📁</button>
           </div>
         </div>
-        <ul class="children collapsed">${childrenHtml}</ul>
+        <ul class="children${isOpen ? "" : " collapsed"}">${childrenHtml}</ul>
       </li>
     `;
   }
@@ -142,7 +153,6 @@ function renderItem(item: FileEntry, category: CategoryType): string {
           <button class="icon-btn" data-action="preview" title="Previsualizar">👁</button>
           <button class="icon-btn" data-action="sendToChat" title="Enviar al chat">✨</button>
           <button class="icon-btn" data-action="copyToClipboard" title="Copiar">📋</button>
-          <button class="icon-btn item-menu-trigger" title="Más opciones">⋯</button>
         </div>
       </div>
     </li>
@@ -236,31 +246,18 @@ export function renderDevPanel(): string {
 /**
  * Render token counter panel HTML.
  */
-export function renderTokenPanel(
-  stats: {
-    fileName: string;
-    tokens: number;
-    characters: number;
-    words: number;
-    lines: number;
-    costs: { model: string; cost: string }[];
-  } | null,
-  files: { name: string; path: string }[] = [],
-): string {
-  const fileListHtml = `
-    <div class="config-card" style="margin-bottom:8px;">
-      <div class="config-card-title">Seleccionar archivo</div>
-      <input class="search-input" id="token-file-search" type="text" placeholder="Buscar archivo..." />
-      <ul class="file-picker-list" id="token-file-list">
-        ${files.map((f) => `<li class="file-picker-item" data-path="${escapeHtml(f.path)}">${escapeHtml(f.name)}</li>`).join("")}
-      </ul>
-      ${stats ? `<button class="btn secondary" style="margin-top:6px;width:100%;" data-action="clearTokenFile">Usar archivo activo del editor</button>` : ""}
-    </div>
-  `;
+export interface TokenStats {
+  fileName: string;
+  tokens: number;
+  characters: number;
+  words: number;
+  lines: number;
+  costs: { model: string; cost: string }[];
+}
 
+export function renderTokenStats(stats: TokenStats | null): string {
   if (!stats) {
     return `
-      ${fileListHtml}
       <div class="empty-state">
         <div class="empty-state-icon">📊</div>
         <div class="empty-state-text">Selecciona un archivo o abre uno en el editor.</div>
@@ -269,7 +266,6 @@ export function renderTokenPanel(
   }
 
   return `
-    ${fileListHtml}
     <div class="config-card" style="margin-bottom:8px;">
       <div class="config-card-title" style="opacity:0.6; font-size:11px;">Archivo</div>
       <div class="config-card-desc" style="opacity:1; font-weight:500;">${escapeHtml(stats.fileName)}</div>
@@ -300,5 +296,33 @@ export function renderTokenPanel(
         ${stats.costs.map((c) => `<li class="cost-item"><span class="cost-model">${escapeHtml(c.model)}</span><span class="cost-value">${c.cost}</span></li>`).join("")}
       </ul>
     </div>
+  `;
+}
+
+export function renderTokenPanel(
+  stats: TokenStats | null,
+  files: { name: string; path: string }[] = [],
+): string {
+  const fileListHtml = `
+    <div class="config-card" style="margin-bottom:8px;">
+      <div class="config-card-title">Seleccionar archivo</div>
+      <input class="search-input" id="token-file-search" type="text" placeholder="Buscar archivo..." />
+      <ul class="file-picker-list" id="token-file-list">
+        ${files.map((f) => `<li class="file-picker-item" data-path="${escapeHtml(f.path)}">${escapeHtml(f.name)}</li>`).join("")}
+      </ul>
+      ${stats ? `<button class="btn secondary" style="margin-top:6px;width:100%;" data-action="clearTokenFile">Usar archivo activo del editor</button>` : ""}
+    </div>
+  `;
+
+  if (!stats) {
+    return `
+      ${fileListHtml}
+      <div id="token-stats">${renderTokenStats(null)}</div>
+    `;
+  }
+
+  return `
+    ${fileListHtml}
+    <div id="token-stats">${renderTokenStats(stats)}</div>
   `;
 }

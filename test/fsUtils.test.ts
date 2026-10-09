@@ -7,8 +7,13 @@ import {
   isDirectory,
   safeReadFile,
   deletePath,
+  isCategoryFileName,
+  normalizeCategoryFileName,
+  normalizeCategoryFilePath,
+  stripCategoryFileExtension,
   toPromptFileName,
 } from "../src/utils/fsUtils";
+import { CATEGORY_FILE_EXTENSIONS, type CategoryType } from "../src/constants";
 
 describe("fsUtils ==>", () => {
   let tmpDir: string;
@@ -53,6 +58,23 @@ describe("fsUtils ==>", () => {
       expect(result).toBe("p-ejemplo.prompt.md");
     });
 
+    it("Given agent, skill and context file names, When converting, Then returns .prompt.md names", () => {
+      // Arrange
+      const inputs = [
+        "a-ejemplo.agent.md",
+        "s-ejemplo.skill.md",
+        "c-ejemplo.context.md",
+      ];
+      // Act
+      const results = inputs.map(toPromptFileName);
+      // Assert
+      expect(results).toEqual([
+        "a-ejemplo.prompt.md",
+        "s-ejemplo.prompt.md",
+        "c-ejemplo.prompt.md",
+      ]);
+    });
+
     it("Given a name without extension, When converting, Then appends .prompt.md", () => {
       // Arrange
       const input = "p-ejemplo";
@@ -60,6 +82,106 @@ describe("fsUtils ==>", () => {
       const result = toPromptFileName(input);
       // Assert
       expect(result).toBe("p-ejemplo.prompt.md");
+    });
+  });
+
+  describe("Data test ==> category extensions", () => {
+    it("Given each resource category, When reading its extension, Then returns the requested suffix", () => {
+      // Arrange
+      const expectedExtensions: Record<CategoryType, string> = {
+        prompts: ".prompt.md",
+        agents: ".agent.md",
+        skills: ".skill.md",
+        instructions: ".instructions.md",
+        context: ".context.md",
+        notes: ".md",
+      };
+      // Act
+      const result = CATEGORY_FILE_EXTENSIONS;
+      // Assert
+      expect(result).toEqual(expectedExtensions);
+    });
+
+    it("Given one file for each category, When checking its name, Then accepts only the matching category", () => {
+      // Arrange
+      const filesByCategory: Record<CategoryType, string> = {
+        prompts: "p-ejemplo.prompt.md",
+        agents: "a-ejemplo.agent.md",
+        skills: "s-ejemplo.skill.md",
+        instructions: "i-ejemplo.instructions.md",
+        context: "c-ejemplo.context.md",
+        notes: "nota.md",
+      };
+      // Act
+      const result = Object.entries(filesByCategory).map(
+        ([category, fileName]) =>
+          isCategoryFileName(fileName, category as CategoryType),
+      );
+      // Assert
+      expect(result).toEqual([true, true, true, true, true, true]);
+    });
+
+    it("Given a specialized Markdown file in notes, When checking its name, Then rejects it as a note", () => {
+      // Arrange
+      const fileName = "s-ejemplo.skill.md";
+      // Act
+      const result = isCategoryFileName(fileName, "notes");
+      // Assert
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("Data test ==> normalize category extensions", () => {
+    it("Given a generic Markdown file in skills, When normalizing its name, Then adds the skill suffix", () => {
+      // Arrange
+      const input = "mi-habilidad.md";
+      // Act
+      const result = normalizeCategoryFileName(input, "skills");
+      // Assert
+      expect(result).toBe("mi-habilidad.skill.md");
+    });
+
+    it("Given a text file in skills, When normalizing its name, Then replaces its extension with the skill suffix", () => {
+      // Arrange
+      const input = "mi-habilidad.txt";
+      // Act
+      const result = normalizeCategoryFileName(input, "skills");
+      // Assert
+      expect(result).toBe("mi-habilidad.skill.md");
+    });
+
+    it("Given a skill file in notes, When normalizing its name, Then changes it to a Markdown note", () => {
+      // Arrange
+      const input = "mi-nota.skill.md";
+      // Act
+      const result = normalizeCategoryFileName(input, "notes");
+      // Assert
+      expect(result).toBe("mi-nota.md");
+    });
+
+    it("Given a file with an incorrect extension, When normalizing its path, Then renames it without overwriting an existing file", () => {
+      // Arrange
+      const sourcePath = path.join(tmpDir, "mi-prompt.md");
+      const existingPath = path.join(tmpDir, "mi-prompt.prompt.md");
+      fs.writeFileSync(sourcePath, "contenido original");
+      fs.writeFileSync(existingPath, "contenido existente");
+      // Act
+      const result = normalizeCategoryFilePath(sourcePath, "prompts");
+      // Assert
+      expect(result).toBe(path.join(tmpDir, "mi-prompt-2.prompt.md"));
+      expect(fs.readFileSync(result!, "utf-8")).toBe("contenido original");
+      expect(fs.readFileSync(existingPath, "utf-8")).toBe("contenido existente");
+    });
+  });
+
+  describe("Data test ==> stripCategoryFileExtension", () => {
+    it("Given a categorized file name, When stripping its extension, Then returns the base name", () => {
+      // Arrange
+      const input = "a-ejemplo.agent.md";
+      // Act
+      const result = stripCategoryFileExtension(input);
+      // Assert
+      expect(result).toBe("a-ejemplo");
     });
   });
 

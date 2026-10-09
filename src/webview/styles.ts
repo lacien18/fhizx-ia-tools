@@ -83,6 +83,13 @@ export function getStyles(): string {
       max-height: 2000px;
     }
 
+    .accordion-description {
+      padding: var(--spacing-sm) var(--spacing-md) 0;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
     /* Drag-and-drop reorder */
     .accordion-header {
       cursor: grab;

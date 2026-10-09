@@ -54,6 +54,14 @@ const DEFAULT_SECTION_ORDER = [
   "context",
 ] as const;
 
+const CATEGORY_DESCRIPTIONS: Partial<Record<CategoryType, string>> = {
+  prompts: "Crea y ejecuta prompts guardados en tu espacio global desde el chat de Copilot.",
+  agents: "Gestiona agentes de IA guardados en tu espacio global para definir roles e instrucciones detalladas.",
+  skills: "Organiza skills reutilizables por dominio o tarea para flujos de trabajo complejos.",
+  instructions: "Define instrucciones reutilizables para aplicar reglas y comportamientos específicos en Copilot.",
+  context: "Gestiona archivos de contexto reutilizables para enriquecer las respuestas de tus asistentes de IA.",
+};
+
 export class MainWebviewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private _disposables: vscode.Disposable[] = [];
@@ -426,7 +434,12 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
       const categoryLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
 
-      return { id: cat, label: categoryLabel, content };
+      return {
+        id: cat,
+        label: categoryLabel,
+        description: CATEGORY_DESCRIPTIONS[cat],
+        content,
+      };
     });
 
     const configContent = this._buildConfigHtml();
@@ -446,6 +459,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
             <div class="accordion-actions">${headerActions}</div>
           </div>
           <div class="accordion-body">
+            ${p.description ? `<div class="accordion-description">${p.description}</div>` : ""}
             <div class="accordion-content" id="panel-${p.id}">${p.content}</div>
           </div>
         </div>`;

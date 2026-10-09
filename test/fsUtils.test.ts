@@ -7,8 +7,11 @@ import {
   isDirectory,
   safeReadFile,
   deletePath,
+  isCategoryFileName,
+  stripCategoryFileExtension,
   toPromptFileName,
 } from "../src/utils/fsUtils";
+import { CATEGORY_FILE_EXTENSIONS, type CategoryType } from "../src/constants";
 
 describe("fsUtils ==>", () => {
   let tmpDir: string;
@@ -53,6 +56,23 @@ describe("fsUtils ==>", () => {
       expect(result).toBe("p-ejemplo.prompt.md");
     });
 
+    it("Given agent, skill and context file names, When converting, Then returns .prompt.md names", () => {
+      // Arrange
+      const inputs = [
+        "a-ejemplo.agent.md",
+        "s-ejemplo.skill.md",
+        "c-ejemplo.context.md",
+      ];
+      // Act
+      const results = inputs.map(toPromptFileName);
+      // Assert
+      expect(results).toEqual([
+        "a-ejemplo.prompt.md",
+        "s-ejemplo.prompt.md",
+        "c-ejemplo.prompt.md",
+      ]);
+    });
+
     it("Given a name without extension, When converting, Then appends .prompt.md", () => {
       // Arrange
       const input = "p-ejemplo";
@@ -60,6 +80,63 @@ describe("fsUtils ==>", () => {
       const result = toPromptFileName(input);
       // Assert
       expect(result).toBe("p-ejemplo.prompt.md");
+    });
+  });
+
+  describe("Data test ==> category extensions", () => {
+    it("Given each resource category, When reading its extension, Then returns the requested suffix", () => {
+      // Arrange
+      const expectedExtensions: Record<CategoryType, string> = {
+        prompts: ".prompt.md",
+        agents: ".agent.md",
+        skills: ".skill.md",
+        instructions: ".instructions.md",
+        context: ".context.md",
+        notes: ".md",
+      };
+      // Act
+      const result = CATEGORY_FILE_EXTENSIONS;
+      // Assert
+      expect(result).toEqual(expectedExtensions);
+    });
+
+    it("Given one file for each category, When checking its name, Then accepts only the matching category", () => {
+      // Arrange
+      const filesByCategory: Record<CategoryType, string> = {
+        prompts: "p-ejemplo.prompt.md",
+        agents: "a-ejemplo.agent.md",
+        skills: "s-ejemplo.skill.md",
+        instructions: "i-ejemplo.instructions.md",
+        context: "c-ejemplo.context.md",
+        notes: "nota.md",
+      };
+      // Act
+      const result = Object.entries(filesByCategory).map(
+        ([category, fileName]) =>
+          isCategoryFileName(fileName, category as CategoryType),
+      );
+      // Assert
+      expect(result).toEqual([true, true, true, true, true, true]);
+    });
+
+    it("Given a specialized Markdown file in notes, When checking its name, Then rejects it as a note", () => {
+      // Arrange
+      const fileName = "s-ejemplo.skill.md";
+      // Act
+      const result = isCategoryFileName(fileName, "notes");
+      // Assert
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("Data test ==> stripCategoryFileExtension", () => {
+    it("Given a categorized file name, When stripping its extension, Then returns the base name", () => {
+      // Arrange
+      const input = "a-ejemplo.agent.md";
+      // Act
+      const result = stripCategoryFileExtension(input);
+      // Assert
+      expect(result).toBe("a-ejemplo");
     });
   });
 

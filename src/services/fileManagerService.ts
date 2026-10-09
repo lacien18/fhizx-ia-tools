@@ -5,11 +5,15 @@ import { WorkspaceItem } from "../models/workspaceItemModel";
 import { WorkspaceTreeDataProvider } from "../providers/workspaceTreeDataProvider";
 import {
   FILE_PREFIXES,
-  FILE_EXTENSIONS,
+  CATEGORY_FILE_EXTENSIONS,
   CATEGORIES,
   type CategoryType,
 } from "../constants";
-import { isDirectory, safeReadFile, toPromptFileName } from "../utils/fsUtils";
+import {
+  isDirectory,
+  safeReadFile,
+  stripCategoryFileExtension,
+} from "../utils/fsUtils";
 import { getGlobalPathConfig, notifyFsError } from "../utils/resourceUtils";
 import { CloudSyncService } from "./cloudSyncService";
 
@@ -48,10 +52,7 @@ export class FileManagerService {
       } else if (
         entry.isFile() &&
         (entry.name === name ||
-          (entry.name.endsWith(FILE_EXTENSIONS.PROMPT_MD) &&
-            entry.name.slice(0, -FILE_EXTENSIONS.PROMPT_MD.length) === name) ||
-          (entry.name.endsWith(FILE_EXTENSIONS.INSTRUCTIONS_MD) &&
-            entry.name.slice(0, -FILE_EXTENSIONS.INSTRUCTIONS_MD.length) === name))
+          stripCategoryFileExtension(entry.name) === name)
       ) {
         return fullPath;
       }
@@ -107,16 +108,8 @@ export class FileManagerService {
       });
       if (!name) return;
 
-      const extension =
-        category === "notes"
-          ? FILE_EXTENSIONS.MARKDOWN
-          : category === "instructions"
-            ? FILE_EXTENSIONS.INSTRUCTIONS_MD
-            : FILE_EXTENSIONS.PROMPT_MD;
-
-      let cleanName = name.trim();
-      if (cleanName.endsWith(extension))
-        cleanName = cleanName.slice(0, -extension.length);
+      const extension = CATEGORY_FILE_EXTENSIONS[category];
+      const cleanName = stripCategoryFileExtension(name.trim());
 
       const prefixForfile = FILE_PREFIXES[category] || "";
 

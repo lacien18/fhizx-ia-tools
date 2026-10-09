@@ -19,6 +19,7 @@
 - **Interfaz Intuitiva & Automatizada**: Incluye comandos rápidos, botones de navegación y automatizaciones inteligentes:
   - **Plantillas (Boilerplates)**: Generación automática de estructuras recomendadas al crear nuevos recursos según su categoría.
   - **Convenciones de Nombres**: Aplicación automática de prefijos (`p-`, `a-`, `s-`, `c-`) para mantener un orden consistente en tu espacio global.
+  - **Extensiones por Categoría**: Prompts (`.prompt.md`), agents (`.agent.md`), skills (`.skill.md`), instructions (`.instructions.md`), context (`.context.md`) y notes (`.md`).
   - **Navegación Rápida**: Menú contextual completo y navegación visual directa desde el explorador lateral.
 
 - **Espacio Global Personalizable**: Define una ruta única mediante la configuración de VS Code donde se almacenarán todos tus recursos, permitiéndote acceder a ellos independientemente del proyecto en el que estés trabajando actualmente. Al configurarla, la extensión crea automáticamente las carpetas `prompts`, `agents`, `skills`, `instructions`, `context` y `notes`.
@@ -69,7 +70,7 @@ Selecciona cualquier elemento en las vistas de Fhizx AI Tools y utiliza el menú
 - ✏️ **Modificar Nombre**: Renombra el archivo o carpeta seleccionado.
 - 🗑️ **Eliminar**: Elimina el recurso seleccionado.
 
-> 💡 También puedes hacer clic derecho sobre cualquier archivo `.md` o `.prompt.md` abierto en el editor para enviarlo al chat de IA.
+> 💡 También puedes hacer clic derecho sobre cualquier archivo Markdown abierto en el editor para enviarlo al chat de IA.
 
 ### Instalar / Desinstalar en Copilot
 La instalación copia el archivo (convertido a `.prompt.md` si es necesario) a la carpeta correspondiente de Copilot (`~/.vscode/github-copilot/<categoría>/`) y registra la ruta en la configuración `chat.promptFilesLocations`, de modo que Copilot pueda utilizarlo como prompt de archivo. Al activarse, la extensión registra automáticamente las carpetas de categoría que ya existan.

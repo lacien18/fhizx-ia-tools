@@ -6,9 +6,9 @@ import { InstallationService } from "../services/installationService";
 import {
   CONFIG_NAMESPACE,
   CONFIG_KEYS,
-  FILE_EXTENSIONS,
   type CategoryType,
 } from "../constants";
+import { isCategoryFileName } from "../utils/fsUtils";
 
 export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<WorkspaceItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -80,16 +80,7 @@ export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
   }
 
   private validateExtension(fileName: string): boolean {
-    if (this.category === "notes") {
-      return (
-        fileName.endsWith(FILE_EXTENSIONS.MARKDOWN) &&
-        !fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)
-      );
-    }
-    if (this.category === "instructions") {
-      return fileName.endsWith(FILE_EXTENSIONS.INSTRUCTIONS_MD);
-    }
-    return fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD);
+    return isCategoryFileName(fileName, this.category);
   }
 
   public getGlobalCategoryPath(): string | undefined {

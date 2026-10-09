@@ -86,7 +86,19 @@ export const COMMAND_PREFIX = {
 export const FILE_EXTENSIONS = {
   MARKDOWN: ".md",
   PROMPT_MD: ".prompt.md",
+  AGENT_MD: ".agent.md",
+  SKILL_MD: ".skill.md",
   INSTRUCTIONS_MD: ".instructions.md",
+  CONTEXT_MD: ".context.md",
+} as const;
+
+export const CATEGORY_FILE_EXTENSIONS: Record<CategoryType, string> = {
+  prompts: FILE_EXTENSIONS.PROMPT_MD,
+  agents: FILE_EXTENSIONS.AGENT_MD,
+  skills: FILE_EXTENSIONS.SKILL_MD,
+  instructions: FILE_EXTENSIONS.INSTRUCTIONS_MD,
+  context: FILE_EXTENSIONS.CONTEXT_MD,
+  notes: FILE_EXTENSIONS.MARKDOWN,
 } as const;
 
 export const ICONS = {

@@ -6,12 +6,12 @@ import {
   COPILOT_CATEGORIES,
   CONFIG_NAMESPACE,
   CONFIG_KEYS,
-  FILE_EXTENSIONS,
   MODEL_PRICES,
   TOKENS_PER_MILLION,
   ENCODING_NAME,
   type CategoryType,
 } from "../constants";
+import { isCategoryFileName } from "../utils/fsUtils";
 
 export interface FileEntry {
   name: string;
@@ -65,16 +65,7 @@ export function buildFileTree(
 }
 
 function validateExtension(fileName: string, category: CategoryType): boolean {
-  if (category === "notes") {
-    return (
-      fileName.endsWith(FILE_EXTENSIONS.MARKDOWN) &&
-      !fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)
-    );
-  }
-  if (category === "instructions") {
-    return fileName.endsWith(FILE_EXTENSIONS.INSTRUCTIONS_MD);
-  }
-  return fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD);
+  return isCategoryFileName(fileName, category);
 }
 
 function escapeHtml(s: string): string {

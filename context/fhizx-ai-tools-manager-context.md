@@ -29,7 +29,7 @@ El valor principal de la extensión se divide en cinco frentes:
 | **Ruta Global** | Carpeta raiz definida en `fhizxAiTools.globalPath` donde viven las categorias de recursos. Sin ella la extension queda en estado de onboarding. |
 | **Categoria** | Tipo de recurso gestionado: `prompts`, `agents`, `skills`, `instructions`, `context`, `notes`. Es la unidad de organizacion del espacio global. |
 | **Categoria Copilot** | Subconjunto instalable en Copilot: `prompts`, `agents`, `skills`, `instructions`, `context` (se excluye `notes`). |
-| **Recurso** | Archivo o carpeta dentro de una categoria. Los archivos usan extension `.prompt.md`, salvo `instructions` (`.instructions.md`) y `notes` (`.md`). |
+| **Recurso** | Archivo o carpeta dentro de una categoria. Los archivos usan `.prompt.md` (prompts), `.agent.md` (agents), `.skill.md` (skills), `.instructions.md` (instructions), `.context.md` (context) o `.md` (notes). |
 | **Instalacion en Copilot** | Copia de un recurso a `~/.vscode/github-copilot/<categoria>/` con nombre normalizado a `.prompt.md` y registro en `chat.promptFilesLocations`. |
 | **Prompt File** | Archivo de instrucciones que Copilot carga como prompt de archivo; se declara en `chat.promptFilesLocations`. |
 | **Boilerplate** | Plantilla Markdown generada automaticamente al crear un archivo nuevo, especifica por categoria. |

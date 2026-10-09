@@ -46,6 +46,8 @@ const DEFAULT_SECTION_ORDER = [
 export class MainWebviewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private _disposables: vscode.Disposable[] = [];
+  private _fileWatcher?: vscode.FileSystemWatcher;
+  private _fileWatcherDisposables: vscode.Disposable[] = [];
   private _context!: vscode.ExtensionContext;
   private _selectedTokenFile?: string;
 
@@ -56,6 +58,35 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
   setContext(context: vscode.ExtensionContext): void {
     this._context = context;
+    context.subscriptions.push(
+      new vscode.Disposable(() => this._disposeFileWatcher()),
+    );
+  }
+
+  private _restartFileWatcher(): void {
+    this._disposeFileWatcher();
+
+    const globalPath = getGlobalPathConfig();
+    if (!globalPath) return;
+
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(globalPath, "**"),
+    );
+    const refresh = () => this.refresh();
+
+    this._fileWatcher = watcher;
+    this._fileWatcherDisposables = [
+      watcher.onDidCreate(refresh),
+      watcher.onDidChange(refresh),
+      watcher.onDidDelete(refresh),
+    ];
+  }
+
+  private _disposeFileWatcher(): void {
+    this._fileWatcherDisposables.forEach((disposable) => disposable.dispose());
+    this._fileWatcherDisposables = [];
+    this._fileWatcher?.dispose();
+    this._fileWatcher = undefined;
   }
 
   private _getSectionOrder(): string[] {
@@ -95,6 +126,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
     _token: vscode.CancellationToken,
   ): void {
     this._view = webviewView;
+    this._restartFileWatcher();
 
     webviewView.webview.options = {
       enableScripts: true,
@@ -114,6 +146,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
     vscode.workspace.onDidChangeConfiguration(
       (e) => {
         if (e.affectsConfiguration(CONFIG_NAMESPACE)) {
+          this._restartFileWatcher();
           this.refresh();
         }
       },
@@ -150,6 +183,7 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
     webviewView.onDidDispose(() => {
       if (this._view === webviewView) this._view = undefined;
+      this._disposeFileWatcher();
       this._disposables.forEach((d) => d.dispose());
       this._disposables = [];
     });

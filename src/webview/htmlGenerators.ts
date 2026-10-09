@@ -88,6 +88,7 @@ function escapeHtml(s: string): string {
 export function renderCategoryPanel(
   items: FileEntry[],
   category: CategoryType,
+  folderOpenState: Record<string, boolean> = {},
 ): string {
   if (items.length === 0) {
     return `
@@ -98,21 +99,28 @@ export function renderCategoryPanel(
     `;
   }
 
-  return `<ul class="item-list">${items.map((item) => renderItem(item, category)).join("")}</ul>`;
+  return `<ul class="item-list">${items.map((item) => renderItem(item, category, folderOpenState)).join("")}</ul>`;
 }
 
-function renderItem(item: FileEntry, category: CategoryType): string {
+function renderItem(
+  item: FileEntry,
+  category: CategoryType,
+  folderOpenState: Record<string, boolean>,
+): string {
   const escapedPath = escapeHtml(item.path);
   const escapedName = escapeHtml(item.name);
 
   if (item.isFolder) {
+    const isOpen = folderOpenState[item.path] === true;
     const childrenHtml = item.children
-      ? item.children.map((c) => renderItem(c, category)).join("")
+      ? item.children
+          .map((c) => renderItem(c, category, folderOpenState))
+          .join("")
       : "";
     return `
       <li>
         <div class="item" data-type="folder" data-path="${escapedPath}" data-category="${category}">
-          <span class="chevron">▸</span>
+          <span class="chevron">${isOpen ? "▾" : "▸"}</span>
           <span class="item-icon folder">📁</span>
           <span class="item-label">${escapedName}</span>
           <div class="item-actions">
@@ -120,7 +128,7 @@ function renderItem(item: FileEntry, category: CategoryType): string {
             <button class="icon-btn" data-action="createFolderContext" data-category="${category}" title="Crear carpeta">📁</button>
           </div>
         </div>
-        <ul class="children collapsed">${childrenHtml}</ul>
+        <ul class="children${isOpen ? "" : " collapsed"}">${childrenHtml}</ul>
       </li>
     `;
   }

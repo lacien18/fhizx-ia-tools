@@ -31,6 +31,9 @@ export const MAIN_WEBVIEW_ID = "fhizxAiTools.mainView";
 
 const SECTION_ORDER_KEY = "fhizxAiTools.sectionOrder";
 const SECTION_OPEN_STATE_KEY = "fhizxAiTools.sectionOpenState";
+const FOLDER_OPEN_STATE_KEY = "fhizxAiTools.folderOpenState";
+const ACTIVE_TAB_KEY = "fhizxAiTools.activeTab";
+type ActiveTab = "tokens" | "config";
 const DEFAULT_SECTION_ORDER = [
   "utils",
   "notes",
@@ -66,6 +69,19 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         SECTION_OPEN_STATE_KEY,
       ) || {}
     );
+  }
+
+  private _getFolderOpenState(): Record<string, boolean> {
+    return (
+      this._context?.globalState.get<Record<string, boolean>>(
+        FOLDER_OPEN_STATE_KEY,
+      ) || {}
+    );
+  }
+
+  private _getActiveTab(): ActiveTab {
+    const saved = this._context?.globalState.get<string>(ACTIVE_TAB_KEY);
+    return saved === "config" ? "config" : "tokens";
   }
 
   // Sections default to open unless the user explicitly closed them before.
@@ -124,7 +140,16 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
       this._disposables,
     );
 
+    webviewView.onDidChangeVisibility(
+      () => {
+        if (webviewView.visible) this.refresh();
+      },
+      undefined,
+      this._disposables,
+    );
+
     webviewView.onDidDispose(() => {
+      if (this._view === webviewView) this._view = undefined;
       this._disposables.forEach((d) => d.dispose());
       this._disposables = [];
     });
@@ -138,11 +163,12 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
     const panels: Record<string, string> = {};
     const globalPath = getGlobalPathConfig();
+    const folderOpenState = this._getFolderOpenState();
 
     for (const cat of CATEGORIES) {
       const catPath = globalPath ? path.join(globalPath, cat) : "";
       const items = catPath ? buildFileTree(catPath, cat) : [];
-      panels[cat] = renderCategoryPanel(items, cat);
+      panels[cat] = renderCategoryPanel(items, cat, folderOpenState);
     }
 
     panels["config"] = this._buildConfigHtml();
@@ -278,12 +304,13 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
   private _getFullHtml(): string {
     const globalPath = getGlobalPathConfig();
+    const folderOpenState = this._getFolderOpenState();
 
     // Build initial panels
     const categoryPanels = CATEGORIES.map((cat) => {
       const catPath = globalPath ? path.join(globalPath, cat) : "";
       const items = catPath ? buildFileTree(catPath, cat) : [];
-      const content = renderCategoryPanel(items, cat);
+      const content = renderCategoryPanel(items, cat, folderOpenState);
 
       const categoryLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
 
@@ -312,14 +339,15 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
         </div>`;
     }
 
+    const activeTab = this._getActiveTab();
     const tabsHtml = `
       <div class="bottom-tabs">
         <div class="tab-bar">
-          <button class="tab active" data-tab="tokens">Tokens</button>
-          <button class="tab" data-tab="config">Config</button>
+          <button class="tab${activeTab === "tokens" ? " active" : ""}" data-tab="tokens">Tokens</button>
+          <button class="tab${activeTab === "config" ? " active" : ""}" data-tab="config">Config</button>
         </div>
-        <div class="tab-panel active" id="tab-tokens">${tokenContent}</div>
-        <div class="tab-panel" id="tab-config">${configContent}</div>
+        <div class="tab-panel${activeTab === "tokens" ? " active" : ""}" id="tab-tokens">${tokenContent}</div>
+        <div class="tab-panel${activeTab === "config" ? " active" : ""}" id="tab-config">${configContent}</div>
       </div>`;
 
     sectionMap["utils"] = `
@@ -567,6 +595,26 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
           const state = this._getSectionOpenState();
           state[(msg as any).section] = (msg as any).open;
           void this._context?.globalState.update(SECTION_OPEN_STATE_KEY, state);
+        }
+        break;
+
+      case "saveFolderState":
+        if (
+          typeof msg.path === "string" &&
+          typeof (msg as any).open === "boolean"
+        ) {
+          const state = this._getFolderOpenState();
+          state[msg.path] = (msg as any).open;
+          void this._context?.globalState.update(FOLDER_OPEN_STATE_KEY, state);
+        }
+        break;
+
+      case "saveTabState":
+        if ((msg as any).tab === "tokens" || (msg as any).tab === "config") {
+          void this._context?.globalState.update(
+            ACTIVE_TAB_KEY,
+            (msg as any).tab,
+          );
         }
         break;
 

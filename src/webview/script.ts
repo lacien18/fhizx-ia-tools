@@ -6,6 +6,18 @@ export function getScript(): string {
   return /* js */ `
     const vscode = acquireVsCodeApi();
 
+    function setActiveTab(tabId) {
+      if (tabId !== 'tokens' && tabId !== 'config') return false;
+      document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tabId));
+      return true;
+    }
+
+    function saveWebviewState(patch) {
+      const state = vscode.getState() || {};
+      vscode.setState({ ...state, ...patch });
+    }
+
     // ── Tab switching ──
     document.addEventListener('click', (e) => {
       const contextMenu = document.getElementById('context-menu');
@@ -16,8 +28,10 @@ export function getScript(): string {
       const tab = e.target.closest('.tab');
       if (tab) {
         const tabId = tab.dataset.tab;
-        document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tabId));
+        if (setActiveTab(tabId)) {
+          saveWebviewState({ activeTab: tabId });
+          vscode.postMessage({ type: 'saveTabState', tab: tabId });
+        }
         return;
       }
 
@@ -27,10 +41,19 @@ export function getScript(): string {
         const section = header.closest('.accordion-section');
         if (section) {
           section.classList.toggle('open');
+          const open = section.classList.contains('open');
+          const sectionId = section.dataset.section;
+          const state = vscode.getState() || {};
+          saveWebviewState({
+            sectionOpenState: {
+              ...(state.sectionOpenState || {}),
+              [sectionId]: open,
+            },
+          });
           vscode.postMessage({
             type: 'saveSectionState',
-            section: section.dataset.section,
-            open: section.classList.contains('open'),
+            section: sectionId,
+            open,
           });
         }
         return;
@@ -46,6 +69,16 @@ export function getScript(): string {
           if (chevron) {
             chevron.textContent = children.classList.contains('collapsed') ? '▸' : '▾';
           }
+          const open = !children.classList.contains('collapsed');
+          const folderPath = folderItem.dataset.path;
+          const state = vscode.getState() || {};
+          saveWebviewState({
+            folderOpenState: {
+              ...(state.folderOpenState || {}),
+              [folderPath]: open,
+            },
+          });
+          vscode.postMessage({ type: 'saveFolderState', path: folderPath, open });
         }
         return;
       }
@@ -243,6 +276,34 @@ export function getScript(): string {
       for (const id of state.sectionOrder) {
         const section = container.querySelector('[data-section="' + id + '"]');
         if (section) container.appendChild(section);
+      }
+    })();
+
+    (function restoreViewState() {
+      const state = vscode.getState();
+      if (!state) return;
+
+      if (setActiveTab(state.activeTab)) {
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+          panel.classList.toggle('active', panel.id === 'tab-' + state.activeTab);
+        });
+      }
+
+      for (const section of document.querySelectorAll('.accordion-section')) {
+        const sectionId = section.dataset.section;
+        const open = state.sectionOpenState?.[sectionId];
+        if (typeof open === 'boolean') section.classList.toggle('open', open);
+      }
+
+      for (const folderItem of document.querySelectorAll('.item[data-type="folder"]')) {
+        const folderPath = folderItem.dataset.path;
+        const open = state.folderOpenState?.[folderPath];
+        if (typeof open !== 'boolean') continue;
+        const children = folderItem.nextElementSibling;
+        if (!children || !children.classList.contains('children')) continue;
+        children.classList.toggle('collapsed', !open);
+        const chevron = folderItem.querySelector('.chevron');
+        if (chevron) chevron.textContent = open ? '▾' : '▸';
       }
     })();
 

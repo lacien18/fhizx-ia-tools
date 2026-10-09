@@ -40,7 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
   );
   mainWebview.setContext(context);
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(MAIN_WEBVIEW_ID, mainWebview),
+    vscode.window.registerWebviewViewProvider(MAIN_WEBVIEW_ID, mainWebview, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
   );
 
   // 3. Servicios de negocio y chat

@@ -248,10 +248,18 @@ export function getStyles(): string {
     }
 
     .item-actions {
-      display: none;
+      display: flex;
       gap: 2px;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition);
     }
-    .item:hover .item-actions { display: flex; }
+    .item:hover .item-actions {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+    }
 
     /* ── Nested items (children of folders) ── */
     .children {

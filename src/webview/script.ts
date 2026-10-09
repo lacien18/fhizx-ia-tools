@@ -8,6 +8,11 @@ export function getScript(): string {
 
     // ── Tab switching ──
     document.addEventListener('click', (e) => {
+      const contextMenu = document.getElementById('context-menu');
+      if (contextMenu && !contextMenu.contains(e.target)) {
+        closeContextMenu();
+      }
+
       const tab = e.target.closest('.tab');
       if (tab) {
         const tabId = tab.dataset.tab;
@@ -87,8 +92,6 @@ export function getScript(): string {
         return;
       }
 
-      // Close context menu
-      closeContextMenu();
     });
 
     // ── Context menu (right-click) ──

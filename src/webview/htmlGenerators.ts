@@ -150,7 +150,6 @@ function renderItem(
           <button class="icon-btn" data-action="preview" title="Previsualizar">👁</button>
           <button class="icon-btn" data-action="sendToChat" title="Enviar al chat">✨</button>
           <button class="icon-btn" data-action="copyToClipboard" title="Copiar">📋</button>
-          <button class="icon-btn item-menu-trigger" title="Más opciones">⋯</button>
         </div>
       </div>
     </li>

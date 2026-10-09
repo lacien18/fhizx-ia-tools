@@ -93,12 +93,6 @@ export function getScript(): string {
       // Icon button click
       const iconBtn = e.target.closest('.icon-btn');
       if (iconBtn) {
-        // Inline menu trigger → open context menu at button position
-        if (iconBtn.classList.contains('item-menu-trigger')) {
-          const itemEl = iconBtn.closest('.item');
-          if (itemEl) showContextMenuForItem(itemEl, iconBtn);
-          return;
-        }
         const action = iconBtn.dataset.action;
         const itemEl = iconBtn.closest('.item');
         const path = itemEl ? itemEl.dataset.path : undefined;

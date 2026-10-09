@@ -1,7 +1,7 @@
 {
   "name": "fhizx-ai-tools-manager",
   "displayName": "Fhizx AI Tools Manager",
-  "description": "Gestiona prompts, agents, skills, context y notas para herramientas de IA",
+  "description": "Gestiona prompts, agents, skills, instructions, context y notas para herramientas de IA",
   "version": "1.7.0",
   "engines": {
     "vscode": "^1.85.0"
@@ -90,6 +90,16 @@
       },
       {
         "command": "fhizxAiTools.createSkillFolder",
+        "title": "Crear Carpeta",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "fhizxAiTools.createInstructionFile",
+        "title": "Crear Archivo",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "fhizxAiTools.createInstructionFolder",
         "title": "Crear Carpeta",
         "icon": "$(new-folder)"
       },
@@ -227,7 +237,7 @@
         "fhizxAiTools.globalPath": {
           "type": "string",
           "default": "",
-          "description": "Ruta global donde se almacenarán los prompts, agents, skills, context y notas."
+          "description": "Ruta global donde se almacenarán los prompts, agents, skills, instructions, context y notas."
         },
         "fhizxAiTools.cloud.owner": {
           "type": "string",

@@ -49,7 +49,9 @@ export class FileManagerService {
         entry.isFile() &&
         (entry.name === name ||
           (entry.name.endsWith(FILE_EXTENSIONS.PROMPT_MD) &&
-            entry.name.slice(0, -FILE_EXTENSIONS.PROMPT_MD.length) === name))
+            entry.name.slice(0, -FILE_EXTENSIONS.PROMPT_MD.length) === name) ||
+          (entry.name.endsWith(FILE_EXTENSIONS.INSTRUCTIONS_MD) &&
+            entry.name.slice(0, -FILE_EXTENSIONS.INSTRUCTIONS_MD.length) === name))
       ) {
         return fullPath;
       }
@@ -65,6 +67,8 @@ export class FileManagerService {
         return `# Agent: ${rawName}\n\n## Rol y Propósito\n[Define quién es este agente]\n\n## Instrucciones\n- Regla 1\n`;
       case "skills":
         return `# Skill: ${rawName}\n\n## Objetivo\n[Describe la habilidad]\n\n## Pasos\n1. Paso inicial...\n`;
+      case "instructions":
+        return `# Instruction: ${rawName}\n\n## Aplicación\n[Describe cuándo debe aplicarse esta instrucción]\n\n## Reglas\n- Regla 1\n`;
       case "context":
         return `# Context: ${rawName}\n\n## Propósito\n[Describe qué contexto aporta este archivo]\n\n## Información Relevante\n- Dato 1\n`;
       case "notes":
@@ -103,10 +107,12 @@ export class FileManagerService {
       });
       if (!name) return;
 
-      const isNote = category === "notes";
-      const extension = isNote
-        ? FILE_EXTENSIONS.MARKDOWN
-        : FILE_EXTENSIONS.PROMPT_MD;
+      const extension =
+        category === "notes"
+          ? FILE_EXTENSIONS.MARKDOWN
+          : category === "instructions"
+            ? FILE_EXTENSIONS.INSTRUCTIONS_MD
+            : FILE_EXTENSIONS.PROMPT_MD;
 
       let cleanName = name.trim();
       if (cleanName.endsWith(extension))

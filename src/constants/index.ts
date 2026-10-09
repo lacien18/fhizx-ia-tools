@@ -5,6 +5,7 @@ export const CATEGORIES = [
   "prompts",
   "agents",
   "skills",
+  "instructions",
   "context",
   "notes",
 ] as const;
@@ -15,6 +16,7 @@ export const COPILOT_CATEGORIES = [
   "prompts",
   "agents",
   "skills",
+  "instructions",
   "context",
 ] as const;
 
@@ -22,6 +24,7 @@ export const FILE_PREFIXES: Record<CategoryType, string> = {
   prompts: "p-",
   agents: "a-",
   skills: "s-",
+  instructions: "i-",
   context: "c-",
   notes: "",
 } as const;
@@ -83,6 +86,7 @@ export const COMMAND_PREFIX = {
 export const FILE_EXTENSIONS = {
   MARKDOWN: ".md",
   PROMPT_MD: ".prompt.md",
+  INSTRUCTIONS_MD: ".instructions.md",
 } as const;
 
 export const ICONS = {

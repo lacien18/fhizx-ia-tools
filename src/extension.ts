@@ -29,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     prompts: new WorkspaceTreeDataProvider("prompts"),
     agents: new WorkspaceTreeDataProvider("agents"),
     skills: new WorkspaceTreeDataProvider("skills"),
+    instructions: new WorkspaceTreeDataProvider("instructions"),
     context: new WorkspaceTreeDataProvider("context"),
     notes: new WorkspaceTreeDataProvider("notes"),
   };

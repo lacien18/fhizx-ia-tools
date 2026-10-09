@@ -45,8 +45,8 @@ export function deletePath(filePath: string, recursive: boolean): void {
 export function toPromptFileName(fileName: string): string {
   if (fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)) return fileName;
   let baseName = fileName;
-  if (baseName.endsWith(".instructions.md")) {
-    baseName = baseName.slice(0, -".instructions.md".length);
+  if (baseName.endsWith(FILE_EXTENSIONS.INSTRUCTIONS_MD)) {
+    baseName = baseName.slice(0, -FILE_EXTENSIONS.INSTRUCTIONS_MD.length);
   } else if (baseName.endsWith(FILE_EXTENSIONS.MARKDOWN)) {
     baseName = baseName.slice(0, -FILE_EXTENSIONS.MARKDOWN.length);
   }

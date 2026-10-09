@@ -71,6 +71,9 @@ function validateExtension(fileName: string, category: CategoryType): boolean {
       !fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)
     );
   }
+  if (category === "instructions") {
+    return fileName.endsWith(FILE_EXTENSIONS.INSTRUCTIONS_MD);
+  }
   return fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD);
 }
 

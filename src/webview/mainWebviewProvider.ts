@@ -50,6 +50,7 @@ const DEFAULT_SECTION_ORDER = [
   "agents",
   "skills",
   "prompts",
+  "instructions",
   "context",
 ] as const;
 
@@ -104,7 +105,13 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
 
   private _getSectionOrder(): string[] {
     const saved = this._context?.globalState.get<string[]>(SECTION_ORDER_KEY);
-    return saved && saved.length > 0 ? saved : [...DEFAULT_SECTION_ORDER];
+    if (!saved || saved.length === 0) return [...DEFAULT_SECTION_ORDER];
+
+    const savedSections = new Set(saved);
+    return [
+      ...saved,
+      ...DEFAULT_SECTION_ORDER.filter((section) => !savedSections.has(section)),
+    ];
   }
 
   private _getSectionOpenState(): Record<string, boolean> {

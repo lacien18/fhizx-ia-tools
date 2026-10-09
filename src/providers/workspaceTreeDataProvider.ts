@@ -86,6 +86,9 @@ export class WorkspaceTreeDataProvider implements vscode.TreeDataProvider<Worksp
         !fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD)
       );
     }
+    if (this.category === "instructions") {
+      return fileName.endsWith(FILE_EXTENSIONS.INSTRUCTIONS_MD);
+    }
     return fileName.endsWith(FILE_EXTENSIONS.PROMPT_MD);
   }
 

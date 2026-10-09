@@ -36,7 +36,7 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
       ),
       new ConfigurationItem(
         "🔄 Recargar",
-        "- Actualiza todas las vistas (prompts, agents, skills, context, notes y configuración).",
+        "- Actualiza todas las vistas (prompts, agents, skills, instructions, context, notes y configuración).",
         "",
         "info",
         {
@@ -62,7 +62,7 @@ export class ConfigurationTreeDataProvider implements vscode.TreeDataProvider<Co
       ),
       new ConfigurationItem(
         "🗃️ Seleccionar ruta local",
-        "- Elige la carpeta donde se guardarán prompts, agents, skills, context y notas.",
+        "- Elige la carpeta donde se guardarán prompts, agents, skills, instructions, context y notas.",
         "",
         "info",
         {

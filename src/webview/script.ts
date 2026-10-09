@@ -99,7 +99,7 @@ export function getScript(): string {
       const item = e.target.closest('.item');
       if (!item) return;
       e.preventDefault();
-      showContextMenuForItem(item, { getBoundingClientRect: () => ({ left: e.clientX, bottom: e.clientY - 2 }) });
+      showContextMenuForItem(item, item, true);
     });
 
     function menuItem(action, label, filePath, category) {
@@ -115,7 +115,7 @@ export function getScript(): string {
       if (menu) menu.classList.remove('visible');
     }
 
-    function showContextMenuForItem(item, anchor) {
+    function showContextMenuForItem(item, anchor, centerHorizontally = false) {
       const menu = document.getElementById('context-menu');
       if (!menu) return;
 
@@ -152,9 +152,18 @@ export function getScript(): string {
       menu.innerHTML = html;
 
       const rect = anchor.getBoundingClientRect();
-      menu.style.left = rect.left + 'px';
-      menu.style.top = (rect.bottom + 2) + 'px';
       menu.classList.add('visible');
+
+      if (centerHorizontally) {
+        const menuRect = menu.getBoundingClientRect();
+        const maxLeft = Math.max(0, window.innerWidth - menuRect.width);
+        const centeredLeft = rect.left + (rect.width - menuRect.width) / 2;
+        menu.style.left = Math.min(Math.max(centeredLeft, 0), maxLeft) + 'px';
+        menu.style.top = (rect.bottom + 2) + 'px';
+      } else {
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom + 2) + 'px';
+      }
 
       menu.querySelectorAll('.context-menu-item').forEach(el => {
         el.addEventListener('click', () => {

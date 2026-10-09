@@ -236,6 +236,14 @@ export function registerCommands(
     }),
 
     vscode.commands.registerCommand(
+      COMMANDS.CREATE_VOICE_NOTE,
+      (transcript?: unknown) => {
+        if (typeof transcript !== "string") return;
+        return fileManager.createVoiceNote(transcript, refreshAll);
+      },
+    ),
+
+    vscode.commands.registerCommand(
       COMMANDS.CREATE_FILE_CONTEXT,
       (node: WorkspaceItem) =>
         fileManager.createNewFile("prompts", refreshAll, node),

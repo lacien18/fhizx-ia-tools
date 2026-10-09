@@ -19,6 +19,10 @@ export function getScript(): string {
     }
 
     let loadingFilePath = null;
+    let voiceRecognition = null;
+    let voiceNoteButton = null;
+    let voiceNoteFinalTranscript = '';
+    let voiceNoteError = null;
 
     function clearFileLoadingState() {
       document.querySelectorAll('.item.loading').forEach(item => {
@@ -26,6 +30,99 @@ export function getScript(): string {
         item.removeAttribute('aria-busy');
       });
       loadingFilePath = null;
+    }
+
+    function setVoiceNoteStatus(status) {
+      const statusElement = document.getElementById('voice-note-status');
+      if (statusElement) statusElement.textContent = status || '';
+    }
+
+    function resetVoiceNoteState() {
+      if (voiceNoteButton) {
+        voiceNoteButton.classList.remove('recording');
+        voiceNoteButton.textContent = '🎙';
+        voiceNoteButton.title = 'Crear nota por voz';
+        voiceNoteButton.setAttribute('aria-label', 'Crear nota por voz');
+      }
+      voiceRecognition = null;
+      voiceNoteButton = null;
+      voiceNoteFinalTranscript = '';
+      voiceNoteError = null;
+      setVoiceNoteStatus('');
+    }
+
+    function postVoiceNoteError(error) {
+      if (error === 'audio-capture') {
+        vscode.postMessage({ type: 'voiceNoteError', error: 'audio-capture' });
+        return;
+      }
+
+      vscode.postMessage({ type: 'voiceNoteError', error });
+    }
+
+    async function startVoiceNoteRecording(button) {
+      if (voiceRecognition) {
+        voiceRecognition.stop();
+        return;
+      }
+
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Recognition) {
+        vscode.postMessage({ type: 'voiceNoteUnavailable' });
+        return;
+      }
+
+      const recognition = new Recognition();
+      voiceRecognition = recognition;
+      voiceNoteButton = button;
+      voiceNoteFinalTranscript = '';
+      voiceNoteError = null;
+
+      button.classList.add('recording');
+      button.textContent = '⏹';
+      button.title = 'Detener dictado';
+      button.setAttribute('aria-label', 'Detener dictado');
+      setVoiceNoteStatus('Escuchando...');
+
+      recognition.lang = 'es-ES';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) voiceNoteFinalTranscript += result[0].transcript + ' ';
+        }
+      };
+
+      recognition.onerror = (event) => {
+        voiceNoteError = event.error || 'unknown';
+      };
+
+      recognition.onend = () => {
+        const transcript = voiceNoteFinalTranscript.trim();
+        const error = voiceNoteError;
+        resetVoiceNoteState();
+
+        if (error) {
+          if (error !== 'aborted') postVoiceNoteError(error);
+          return;
+        }
+
+        if (transcript) {
+          vscode.postMessage({ type: 'createVoiceNote', transcript });
+        } else {
+          vscode.postMessage({ type: 'voiceNoteEmpty' });
+        }
+      };
+
+      try {
+        // Keep start() in the click handler so Electron preserves the user gesture.
+        recognition.start();
+      } catch (error) {
+        resetVoiceNoteState();
+        postVoiceNoteError('start-failed');
+      }
     }
 
     // ── Tab switching ──
@@ -111,6 +208,10 @@ export function getScript(): string {
         const itemEl = iconBtn.closest('.item');
         const path = itemEl ? itemEl.dataset.path : undefined;
         const category = iconBtn.dataset.category || (itemEl ? itemEl.dataset.category : undefined);
+        if (action === 'createVoiceNote') {
+          startVoiceNoteRecording(iconBtn);
+          return;
+        }
         vscode.postMessage({ type: action, path, category });
         return;
       }

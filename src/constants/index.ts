@@ -58,6 +58,7 @@ export const COMMANDS = {
   TOGGLE_INSTALL: "fhizxAiTools.toggleInstall",
   OPEN_GLOBAL_PATH: "fhizxAiTools.openGlobalPath",
   COPY_TO_CLIPBOARD: "fhizxAiTools.copyToClipboard",
+  CREATE_VOICE_NOTE: "fhizxAiTools.createVoiceNote",
   CREATE_FILE_CONTEXT: "fhizxAiTools.createFileContext",
   CREATE_FOLDER_CONTEXT: "fhizxAiTools.createFolderContext",
   RENAME_ITEM: "fhizxAiTools.renameItem",

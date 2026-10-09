@@ -512,8 +512,12 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
   }
 
   private _getCategoryHeaderActions(category: CategoryType): string {
-    const cap = category.charAt(0).toUpperCase() + category.slice(1);
+    const voiceNoteAction = category === "notes"
+      ? `<button class="icon-btn" data-action="createVoiceNote" data-category="notes" title="Crear nota por voz" aria-label="Crear nota por voz">🎙</button><span id="voice-note-status" class="voice-note-status" role="status" aria-live="polite"></span>`
+      : "";
+
     return `
+      ${voiceNoteAction}
       <button class="icon-btn" data-action="createFile" data-category="${category}" title="Crear archivo">📄</button>
       <button class="icon-btn" data-action="createFolder" data-category="${category}" title="Crear carpeta">📁</button>
     `;
@@ -523,6 +527,8 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
     type: string;
     path?: string;
     category?: string;
+    transcript?: string;
+    error?: string;
   }): Promise<void> {
     switch (msg.type) {
       case "openFile":
@@ -590,6 +596,61 @@ export class MainWebviewProvider implements vscode.WebviewViewProvider {
             `fhizxAiTools.create${catFile.charAt(0).toUpperCase() + catFile.slice(1)}File`,
           );
         }
+        break;
+
+      case "createVoiceNote":
+        if (typeof msg.transcript === "string") {
+          void vscode.commands.executeCommand(
+            COMMANDS.CREATE_VOICE_NOTE,
+            msg.transcript,
+          );
+        }
+        break;
+
+      case "voiceNoteUnavailable":
+        void vscode.window.showWarningMessage(
+          "El dictado por voz no está disponible en esta versión de VS Code.",
+        );
+        break;
+
+      case "voiceNoteError":
+        if (msg.error === "microphone-unavailable") {
+          void vscode.window.showWarningMessage(
+            "Este entorno de VS Code no permite solicitar acceso al micrófono.",
+          );
+          break;
+        }
+
+        if (
+          msg.error === "not-allowed" ||
+          msg.error === "NotAllowedError" ||
+          msg.error === "SecurityError"
+        ) {
+          const permissionMessage = process.platform === "darwin"
+            ? "El dictado de la webview fue rechazado por VS Code/Electron. Recarga la ventana y, si continúa, habilita Visual Studio Code en Ajustes del Sistema > Privacidad y seguridad > Micrófono."
+            : process.platform === "win32"
+              ? "El dictado de la webview fue rechazado por VS Code/Electron. Recarga la ventana y, si continúa, activa el acceso para aplicaciones de escritorio y Visual Studio Code en Configuración > Privacidad y seguridad > Micrófono."
+              : "El dictado de la webview fue rechazado por VS Code/Electron. Recarga la ventana y revisa los permisos de privacidad del sistema.";
+          void vscode.window.showWarningMessage(permissionMessage);
+          break;
+        }
+
+        if (msg.error === "audio-capture") {
+          void vscode.window.showWarningMessage(
+            "VS Code no pudo capturar audio. Selecciona un micrófono disponible en la configuración de entrada de audio del sistema y vuelve a intentarlo.",
+          );
+          break;
+        }
+
+        void vscode.window.showWarningMessage(
+          "No se pudo completar el dictado por voz.",
+        );
+        break;
+
+      case "voiceNoteEmpty":
+        void vscode.window.showInformationMessage(
+          "No se detectó contenido en el dictado.",
+        );
         break;
 
       case "createFolder":

@@ -11,7 +11,7 @@
   - 🛠️ **Skills**: Organiza habilidades específicas por dominio o tarea para flujos de trabajo complejos.
   - 📜 **Instructions**: Define instrucciones reutilizables para aplicar reglas y comportamientos específicos en Copilot.
   - 🧠 **Context**: Gestiona archivos de contexto reutilizables para enriquecer las respuestas de tus asistentes de IA.
-  - 📓 **Notes**: Mantén notas relevantes y rápidas para tu flujo de trabajo con IA en un solo lugar centralizado.
+  - 📓 **Notes**: Mantén notas relevantes y rápidas para tu flujo de trabajo con IA en un solo lugar centralizado, también mediante dictado por voz.
   - 🔢 **Token Counter**: Estadísticas en tiempo real del archivo activo: tokens exactos, caracteres, palabras, líneas y costo estimado por modelo (GPT-4o, GPT-4o Mini, Claude 3.5 Sonnet y Gemini Flash).
 
 - **Integración con Copilot**: Instala y desinstala tus prompts, agents, skills, instructions y context directamente en Copilot copiándolos a `~/.vscode/github-copilot/<categoría>/`. Los recursos instalados se muestran con indicador verde (✅) y los pendientes de instalar en rojo (❌).
@@ -59,6 +59,8 @@ Respaldar tus recursos en la nube es gratis e instantáneo. La sección **NUBE G
 ### Navegación y Creación
 En el panel lateral podrás ver las secciones correspondientes a Prompts, Agents, Skills, Instructions, Context y Notes. Utiliza los botones en la barra superior o el menú contextual para:
 - **Crear Archivo**: Añade una nueva entrada usando plantillas predefinidas según el tipo de recurso seleccionado (Prompt, Agent, Skill, Instruction, Context o Nota).
+- **Crear nota por voz**: Pulsa el icono del micrófono en Notes, dicta el contenido y la extensión guardará automáticamente una nota Markdown con un nombre generado.
+- **Permiso de micrófono**: En macOS habilita Visual Studio Code en `Ajustes del Sistema > Privacidad y seguridad > Micrófono`; en Windows activa el acceso en `Configuración > Privacidad y seguridad > Micrófono`.
 - **Crear Carpeta**: Organiza tus recursos por categorías, proyectos específicos u otros niveles jerárquicos.
 
 ### Acciones Rápidas
@@ -97,6 +99,7 @@ Una vez configurado tu espacio global, puedes invocar al participante `@fhizx-ai
 | `fhizxAiTools.createContextFile` | Crear Context nuevo (con prefijo c-) | $(file-add) |
 | `fhizxAiTools.createContextFolder` | Crear carpeta de Context | $(new-folder) |
 | `fhizxAiTools.createNoteFile` | Crear Nota nueva | $(file-add) |
+| `fhizxAiTools.createVoiceNote` | Crear Nota por Voz | $(mic) |
 | `fhizxAiTools.createNoteFolder` | Crear carpeta de Notes | $(new-folder) |
 | `fhizxAiTools.createFileContext` | Crear archivo dentro de una carpeta | $(file-add) |
 | `fhizxAiTools.createFolderContext` | Crear subcarpeta dentro de una carpeta | $(new-folder) |

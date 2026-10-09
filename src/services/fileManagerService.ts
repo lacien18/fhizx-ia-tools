@@ -79,6 +79,64 @@ export class FileManagerService {
     }
   }
 
+  async createVoiceNote(
+    transcript: string,
+    refreshAll: () => void,
+  ): Promise<void> {
+    try {
+      const content = transcript.trim();
+      if (!content) {
+        vscode.window.showWarningMessage("No se detectó contenido en el dictado.");
+        return;
+      }
+
+      const basePath = this.providers.notes.getGlobalCategoryPath() || "";
+      if (!basePath) {
+        vscode.window.showWarningMessage(
+          "Configura la ruta global haciendo clic en el icono de configuración.",
+        );
+        return;
+      }
+
+      fs.mkdirSync(basePath, { recursive: true });
+      const baseName = this.getVoiceNoteBaseName(content);
+      const filePath = this.getUniqueVoiceNotePath(basePath, baseName);
+      const noteContent = `# Nota por voz\n\n${content}\n`;
+
+      fs.writeFileSync(filePath, noteContent, "utf-8");
+      refreshAll();
+      this.cloudService?.scheduleExplicitPush();
+      void vscode.window.showTextDocument(vscode.Uri.file(filePath));
+    } catch (error) {
+      notifyFsError("No se pudo crear la nota por voz", error);
+    }
+  }
+
+  private getVoiceNoteBaseName(content: string): string {
+    const slug = content
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48)
+      .replace(/-+$/g, "");
+
+    return slug ? `nota-${slug}` : `nota-${Date.now()}`;
+  }
+
+  private getUniqueVoiceNotePath(basePath: string, baseName: string): string {
+    let filePath = path.join(basePath, `${baseName}.md`);
+    let suffix = 2;
+
+    while (fs.existsSync(filePath)) {
+      filePath = path.join(basePath, `${baseName}-${suffix}.md`);
+      suffix += 1;
+    }
+
+    return filePath;
+  }
+
   async createNewFile(
     category: CategoryType,
     refreshAll: () => void,

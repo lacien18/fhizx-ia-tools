@@ -59,7 +59,7 @@ Respaldar tus recursos en la nube es gratis e instantáneo. La sección **NUBE G
 ### Navegación y Creación
 En el panel lateral podrás ver las secciones correspondientes a Prompts, Agents, Skills, Instructions, Context y Notes. Utiliza los botones en la barra superior o el menú contextual para:
 - **Crear Archivo**: Añade una nueva entrada usando plantillas predefinidas según el tipo de recurso seleccionado (Prompt, Agent, Skill, Instruction, Context o Nota).
-- **Crear nota por voz**: Pulsa el icono del micrófono en Notes, dicta el contenido y la extensión guardará automáticamente una nota Markdown con un nombre generado.
+- **Crear nota por voz**: Pulsa el icono del micrófono en Notes, indica el nombre, dicta el contenido en el Chat de VS Code y envía el mensaje para guardarlo en una nota Markdown.
 - **Permiso de micrófono**: En macOS habilita Visual Studio Code en `Ajustes del Sistema > Privacidad y seguridad > Micrófono`; en Windows activa el acceso en `Configuración > Privacidad y seguridad > Micrófono`.
 - **Crear Carpeta**: Organiza tus recursos por categorías, proyectos específicos u otros niveles jerárquicos.
 

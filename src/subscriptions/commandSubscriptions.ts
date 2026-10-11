@@ -243,9 +243,9 @@ export function registerCommands(
 
     vscode.commands.registerCommand(
       COMMANDS.CREATE_VOICE_NOTE,
-      (transcript?: unknown) => {
-        if (typeof transcript !== "string") return;
-        return fileManager.createVoiceNote(transcript, refreshAll);
+      (name?: unknown, transcript?: unknown) => {
+        if (typeof name !== "string" || typeof transcript !== "string") return;
+        return fileManager.createVoiceNote(name, transcript, refreshAll);
       },
     ),
 

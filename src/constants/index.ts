@@ -123,6 +123,11 @@ export const CHAT_PARTICIPANT_ID = "fhizx-ai-tools.participant";
 
 export const COPILOT_BASE_DIR = path.join(
   os.homedir(),
+  ".copilot",
+);
+
+export const LEGACY_COPILOT_BASE_DIR = path.join(
+  os.homedir(),
   ".vscode",
   "github-copilot",
 );

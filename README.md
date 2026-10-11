@@ -14,7 +14,7 @@
   - 📓 **Notes**: Mantén notas relevantes y rápidas para tu flujo de trabajo con IA en un solo lugar centralizado, también mediante dictado por voz.
   - 🔢 **Token Counter**: Estadísticas en tiempo real del archivo activo: tokens exactos, caracteres, palabras, líneas y costo estimado por modelo (GPT-4o, GPT-4o Mini, Claude 3.5 Sonnet y Gemini Flash).
 
-- **Integración con Copilot**: Instala y desinstala tus prompts, agents, skills, instructions y context directamente en Copilot copiándolos a `~/.vscode/github-copilot/<categoría>/`. Los recursos instalados se muestran con indicador verde (✅) y los pendientes de instalar en rojo (❌).
+- **Integración con Copilot**: Instala cada recurso en la ubicación correspondiente: prompts en `User/prompts` del perfil de VS Code, agents en `~/.copilot/agents`, skills en `~/.copilot/skills/<slug>/SKILL.md` e instructions en `~/.copilot/instructions`. Context conserva su carpeta de compatibilidad `~/.vscode/github-copilot/context/`.
 
 - **Interfaz Intuitiva & Automatizada**: Incluye comandos rápidos, botones de navegación y automatizaciones inteligentes:
   - **Plantillas (Boilerplates)**: Generación automática de estructuras recomendadas al crear nuevos recursos según su categoría.
@@ -75,7 +75,9 @@ Selecciona cualquier elemento en las vistas de Fhizx AI Tools y utiliza el menú
 > 💡 También puedes hacer clic derecho sobre cualquier archivo Markdown abierto en el editor para enviarlo al chat de IA.
 
 ### Instalar / Desinstalar en Copilot
-La instalación copia el archivo (convertido a `.prompt.md` si es necesario) a la carpeta correspondiente de Copilot (`~/.vscode/github-copilot/<categoría>/`) y registra la ruta en la configuración `chat.promptFilesLocations`, de modo que Copilot pueda utilizarlo como prompt de archivo. Al activarse, la extensión registra automáticamente las carpetas de categoría que ya existan.
+La instalación conserva la extensión nativa de cada formato. Los prompt files se copian a `User/prompts` del perfil activo y se registran en `chat.promptFilesLocations`; los agents e instructions van a `~/.copilot/agents` y `~/.copilot/instructions`. Cada skill se instala como `~/.copilot/skills/<slug>/SKILL.md`, con metadatos `name` y `description`. Context sigue usando `~/.vscode/github-copilot/context/` y se registra como prompt file por compatibilidad.
+
+Nota: los prompt files `.prompt.md` funcionan con el agente Local de VS Code; Copilot Agent Host no los carga. Para flujos disponibles en Agent Host, usa skills.
 
 ### Uso del Chat Participant
 Una vez configurado tu espacio global, puedes invocar al participante `@fhizx-ai-tools` en el chat para ejecutar acciones basadas en la lógica que hayas definido previamente:

@@ -2,19 +2,36 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { WorkspaceItem } from "../models/workspaceItemModel";
-import { CONFIG_KEYS, COPILOT_BASE_DIR } from "../constants";
-import { isDirectory, toPromptFileName } from "../utils/fsUtils";
+import { CONFIG_KEYS, type CategoryType } from "../constants";
+import { isDirectory } from "../utils/fsUtils";
+import {
+  getCopilotGlobalPath as resolveCopilotGlobalPath,
+  getCopilotTargetPath,
+} from "../utils/copilotUtils";
 
 export class InstallationService {
+  private static userProfileDirectory = "";
+
+  public static initialize(globalStorageUri: vscode.Uri): void {
+    this.userProfileDirectory = path.resolve(
+      globalStorageUri.fsPath,
+      "..",
+      "..",
+    );
+  }
+
   public static getCopilotGlobalPath(category: string): string {
-    return path.join(COPILOT_BASE_DIR, category);
+    return resolveCopilotGlobalPath(
+      category as CategoryType,
+      this.userProfileDirectory,
+    );
   }
 
   public static isInstalled(fileName: string, category: string): boolean {
-    const targetFileName = toPromptFileName(fileName);
-    const targetPath = path.join(
-      this.getCopilotGlobalPath(category),
-      targetFileName,
+    const targetPath = getCopilotTargetPath(
+      fileName,
+      category as CategoryType,
+      this.userProfileDirectory,
     );
     return fs.existsSync(targetPath);
   }
@@ -22,32 +39,44 @@ export class InstallationService {
   public static async installItem(node: WorkspaceItem, category: string) {
     if (isDirectory(node.resourceUri.fsPath)) return;
     const sourcePath = node.resourceUri.fsPath;
-    const targetDir = this.getCopilotGlobalPath(category);
-
-    const targetFileName = toPromptFileName(node.label);
-    const targetPath = path.join(targetDir, targetFileName);
+    const targetPath = getCopilotTargetPath(
+      node.label,
+      category as CategoryType,
+      this.userProfileDirectory,
+    );
+    const targetDir = path.dirname(targetPath);
 
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }
 
     fs.copyFileSync(sourcePath, targetPath);
-    await this.updateCopilotConfig(targetDir);
+    if (category === "prompts" || category === "context") {
+      await this.updateCopilotConfig(targetDir);
+    }
     vscode.window.showInformationMessage(
-      `Instalado en Copilot: ${targetFileName}`,
+      `Instalado en Copilot: ${path.basename(targetPath)}`,
     );
   }
 
   public static async uninstallItem(node: WorkspaceItem, category: string) {
     if (isDirectory(node.resourceUri.fsPath)) return;
-    const targetDir = this.getCopilotGlobalPath(category);
-    const targetFileName = toPromptFileName(node.label);
-    const targetPath = path.join(targetDir, targetFileName);
+    const targetPath = getCopilotTargetPath(
+      node.label,
+      category as CategoryType,
+      this.userProfileDirectory,
+    );
 
     if (fs.existsSync(targetPath)) {
       fs.unlinkSync(targetPath);
+      if (category === "skills") {
+        const skillDirectory = path.dirname(targetPath);
+        if (fs.readdirSync(skillDirectory).length === 0) {
+          fs.rmdirSync(skillDirectory);
+        }
+      }
       vscode.window.showInformationMessage(
-        `Desinstalado de Copilot: ${targetFileName}`,
+        `Desinstalado de Copilot: ${path.basename(targetPath)}`,
       );
     }
   }

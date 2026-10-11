@@ -16,6 +16,7 @@ import {
   safeReadFile,
   stripCategoryFileExtension,
 } from "../utils/fsUtils";
+import { getCopilotSkillName } from "../utils/copilotUtils";
 import { getGlobalPathConfig, notifyFsError } from "../utils/resourceUtils";
 import { CloudSyncService } from "./cloudSyncService";
 
@@ -81,7 +82,7 @@ export class FileManagerService {
       case "agents":
         return `# Agent: ${rawName}\n\n## Rol y Propósito\n[Define quién es este agente]\n\n## Instrucciones\n- Regla 1\n`;
       case "skills":
-        return `# Skill: ${rawName}\n\n## Objetivo\n[Describe la habilidad]\n\n## Pasos\n1. Paso inicial...\n`;
+        return `---\nname: ${getCopilotSkillName(rawName)}\ndescription: "Describe what this skill does and when Copilot should use it."\n---\n\n# Skill: ${rawName}\n\n## Objetivo\n[Describe la habilidad]\n\n## Pasos\n1. Paso inicial...\n`;
       case "instructions":
         return `# Instruction: ${rawName}\n\n## Aplicación\n[Describe cuándo debe aplicarse esta instrucción]\n\n## Reglas\n- Regla 1\n`;
       case "context":

@@ -17,7 +17,7 @@ Tipo: Extensión de Visual Studio Code (TypeScript, CommonJS, target ES2022, VS 
 El valor principal de la extensión se divide en cinco frentes:
 
 1. **Espacio global personalizable**: define una ruta única (configuración `fhizxAiTools.globalPath`) que almacena las categorías `prompts`, `agents`, `skills`, `instructions`, `context` y `notes`, accesible desde cualquier proyecto.
-2. **Integración con GitHub Copilot**: permite instalar y desinstalar recursos copiándolos a `~/.vscode/github-copilot/<categoria>/` (con conversión automática a `.prompt.md`) y registrándolos en `chat.promptFilesLocations`, de modo que Copilot los consuma como prompt files.
+2. **Integración con GitHub Copilot**: instala prompt files en `User/prompts` del perfil activo, agents en `~/.copilot/agents`, skills en `~/.copilot/skills/<slug>/SKILL.md` e instructions en `~/.copilot/instructions`. Context conserva `~/.vscode/github-copilot/context/`; solo prompts y context se registran en `chat.promptFilesLocations`.
 3. **Chat Participant `@fhizx-ai-tools`**: expone los recursos dentro del chat de Copilot mediante los comandos `usar <nombre>` (carga contenido recursivamente) y `listar [filtro]`.
 4. **Panel único (webview) "FhizxAITools"**: reemplaza las antiguas vistas de árbol; un solo panel con secciones plegables por categoría, exportación a PDF, copia de seguridad en la nube (GitHub) y una sección "Utils" con contador de tokens, configuración y aprovisionamiento de un entorno de desarrollo (extensiones + estilo visual de VS Code).
 5. **Auto-actualización**: la extensión revisa un repositorio de GitHub propio en cada activación y puede descargar e instalar el `.vsix` más reciente sin pasar por el Marketplace.
@@ -30,7 +30,7 @@ El valor principal de la extensión se divide en cinco frentes:
 | **Categoria** | Tipo de recurso gestionado: `prompts`, `agents`, `skills`, `instructions`, `context`, `notes`. Es la unidad de organizacion del espacio global. |
 | **Categoria Copilot** | Subconjunto instalable en Copilot: `prompts`, `agents`, `skills`, `instructions`, `context` (se excluye `notes`). |
 | **Recurso** | Archivo o carpeta dentro de una categoria. Los archivos usan `.prompt.md` (prompts), `.agent.md` (agents), `.skill.md` (skills), `.instructions.md` (instructions), `.context.md` (context) o `.md` (notes). |
-| **Instalacion en Copilot** | Copia de un recurso a `~/.vscode/github-copilot/<categoria>/` con nombre normalizado a `.prompt.md` y registro en `chat.promptFilesLocations`. |
+| **Instalacion en Copilot** | Copia a la ubicación nativa por tipo: prompts al perfil activo de VS Code, agents/skills/instructions a `~/.copilot/<tipo>`; una skill se instala como `<slug>/SKILL.md`. Prompts y context se registran en `chat.promptFilesLocations`. |
 | **Prompt File** | Archivo de instrucciones que Copilot carga como prompt de archivo; se declara en `chat.promptFilesLocations`. |
 | **Boilerplate** | Plantilla Markdown generada automaticamente al crear un archivo nuevo, especifica por categoria. |
 | **Prefijo de nombre** | Convencion aplicada por categoria: `p-` (prompts), `a-` (agents), `s-` (skills), `i-` (instructions), `c-` (context), sin prefijo en notes. |
@@ -50,7 +50,7 @@ El valor principal de la extensión se divide en cinco frentes:
 | Actor | Interaccion |
 | :--- | :--- |
 | **Usuario Final (Desarrollador)** | Interactua con el panel unico (webview), su menu contextual HTML, comandos, QuickPicks, dialogs de entrada y el chat de Copilot. |
-| **GitHub Copilot** | Destino de la instalacion de recursos (directorio `~/.vscode/github-copilot/`) y host del chat participant. |
+| **GitHub Copilot** | Destino de agentes, skills e instrucciones (`~/.copilot/`); los prompts van al perfil de VS Code y context conserva su carpeta legacy. Tambien es host del chat participant. |
 | **GitHub (repo de releases propio)** | Origen de la auto-actualizacion (`checkForUpdates` consulta `lacien18/fhizx-ia-tools`, rama `main`, carpeta `src/versions/*.vsix`). |
 | **GitHub (nube personal del usuario)** | Repositorio privado configurable (`cloud.owner`/`cloud.repo`) usado como backup remoto de la ruta global via `CloudSyncService`. |
 | **Sistema de Archivos** | Fuente de verdad de los recursos (ruta global) y del directorio Copilot. |
@@ -68,7 +68,7 @@ El valor principal de la extensión se divide en cinco frentes:
 - **UC-07 Eliminar elemento**: confirmacion modal, luego `rmSync` (recursivo si es carpeta) o `unlinkSync`.
 - **UC-08 Copiar al portapapeles**: `safeReadFile` + `env.clipboard.writeText`, boton inline del item.
 - **UC-09 Enviar al chat**: se abre el chat de Copilot con la query `Usa el siguiente recurso (<nombre>):\n\n<contenido>`; si el chat no soporta query, fallback a portapapeles.
-- **UC-10 Instalar en Copilot**: copia el recurso a `~/.vscode/github-copilot/<categoria>/` con nombre normalizado a `.prompt.md` y registra el directorio en `chat.promptFilesLocations`.
+- **UC-10 Instalar en Copilot**: instala cada formato en su ubicación nativa; crea `~/.copilot/skills/<slug>/SKILL.md` para skills y registra en `chat.promptFilesLocations` solo prompts y context.
 - **UC-11 Desinstalar de Copilot**: elimina el archivo del directorio Copilot.
 - **UC-12 Alternar instalacion (toggle)**: desde un item concreto del panel (menu contextual) o desde el boton "Instalar / Desinstalar en Copilot" de la pestaña Config, que abre un QuickPick con todos los recursos instalables y su estado.
 - **UC-13 Chat participant `usar <nombre>`**: busqueda recursiva por nombre (con tolerancia a extension) en las cinco categorias Copilot, lectura segura y renderizado en Markdown.
@@ -85,7 +85,7 @@ El valor principal de la extensión se divide en cinco frentes:
 ### Casos de Uso Secundarios y Alternativos
 
 - **Onboarding**: si no hay ruta global al activarse, se muestra un mensaje de bienvenida con accion directa a `setGlobalPath`.
-- **Auto-registro de prompt files**: al activarse, la extension registra en `chat.promptFilesLocations` los directorios de categoria ya existentes en `~/.vscode/github-copilot/` (misma logica duplicada en `extension.ts` e `InstallationService`, ver deuda tecnica).
+- **Auto-registro de prompt files**: al activarse, la extension registra en `chat.promptFilesLocations` los directorios del perfil para prompts y el directorio legacy de context, si existen. Agents, skills e instructions no se añaden a esta configuración.
 - **QuickPick de instalacion global**: `toggleInstall` sin nodo actua como selector de recursos en toda la ruta global (recorre `COPILOT_CATEGORIES` directamente con `fs.readdirSync`, sin pasar por `FileManagerService`).
 - **Creacion contextual dentro de carpetas**: `createFileContext` / `createFolderContext` crean recursos dentro de la carpeta seleccionada, redirigiendo la categoria segun la ruta real (`getCategoryFromPath`); el webview construye un objeto `WorkspaceItem`-like a partir del `path` recibido en el mensaje.
 - **Fallback de tokens**: si `js-tiktoken` falla, se estima `ceil(caracteres / 4)`.
@@ -102,7 +102,7 @@ El valor principal de la extensión se divide en cinco frentes:
 | UC-03/04 (Crear) | Ruta global configurada; nombre no existente. | Archivo/carpeta creados en la categoria; webview refrescado; archivo abierto en editor; push a la nube programado si hay servicio. |
 | UC-06 (Renombrar) | Elemento seleccionado; nuevo nombre sin colision. | Elemento renombrado en disco; webview refrescado; push a la nube programado. |
 | UC-07 (Eliminar) | Elemento seleccionado; confirmacion del usuario. | Elemento borrado del disco; webview refrescado; push a la nube programado. |
-| UC-10/11 (Instalar/Desinstalar) | Archivo valido en categoria Copilot. | Archivo presente/ausente en `~/.vscode/github-copilot/<cat>/`; config `chat.promptFilesLocations` registrada; webview refrescado. |
+| UC-10/11 (Instalar/Desinstalar) | Archivo valido en categoria Copilot. | Recurso presente/ausente en el destino nativo de su tipo; `chat.promptFilesLocations` se actualiza para prompts y context; webview refrescado. |
 | UC-13 (usar) | Ruta global configurada; recurso existente. | Contenido del recurso mostrado en el chat (o mensaje de no encontrado). |
 | UC-14 (listar) | Ruta global configurada. | Listado Markdown por categoria en el chat. |
 | UC-15 (Panel de tokens) | Archivo activo en el editor o archivo seleccionado del picker. | Estadisticas mostradas en el panel; se actualizan con cada cambio de documento o de editor activo. |
@@ -147,11 +147,11 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 4. El comando llama `refreshAll()` (invoca `mainWebview.refresh()`), que reconstruye todos los paneles y los envia con `postMessage({ type: "updateAll", panels })`.
 5. Operaciones CRUD (crear, renombrar, eliminar) tambien llaman `cloudService.scheduleExplicitPush()` para programar una subida a la nube si esta configurada.
 
-**Flujo instalacion en Copilot**: sin cambios respecto a versiones previas.
+**Flujo instalacion en Copilot**:
 
-1. `InstallationService.installItem` copia el recurso con nombre normalizado (`toPromptFileName`) a `~/.vscode/github-copilot/<cat>/`.
-2. `updateCopilotConfig` agrega el directorio a `chat.promptFilesLocations` (Global) si falta.
-3. Al activarse, `ensureCopilotPromptConfig` (en `extension.ts`, logica duplicada respecto a `updateCopilotConfig`) hace lo mismo con directorios ya existentes.
+1. `InstallationService.installItem` resuelve el destino según la categoría y conserva la extensión nativa; las skills se escriben como `<slug>/SKILL.md` bajo `~/.copilot/skills/`.
+2. `updateCopilotConfig` agrega a `chat.promptFilesLocations` (Global) solo los directorios de prompts y context.
+3. Al activarse, `ensureCopilotPromptConfig` registra los directorios existentes para prompts y context.
 4. El webview refleja el nuevo estado via `refreshAll`.
 
 **Flujo pull desde la nube (pullFromCloud)**: sin cambios respecto a versiones previas (Git Trees + Blobs API, `diffLocalVsRemote` para borrar archivos `localOnly`, descargas individuales con try-catch).
@@ -194,13 +194,14 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 | `WorkspaceItem` | `src/models/workspaceItemModel.ts` | Modelo (antes `TreeItem`) usado como tipo de parametro en los comandos; el webview construye objetos planos con la misma forma en lugar de instanciarlo. |
 | `ConfigurationItem` / `TokenStatItem` | `src/models/*.ts` | **Codigo muerto**, sin referencias activas fuera de si mismos. |
 | `FileManagerService` | `src/services/fileManagerService.ts` | CRUD de archivos/carpetas, generacion de boilerplates por categoria, busqueda recursiva y resolucion de categoria desde una ruta. |
-| `InstallationService` | `src/services/installationService.ts` | Instalacion/desinstalacion/toggle de recursos en Copilot y registro en `chat.promptFilesLocations` (metodos estaticos). |
+| `InstallationService` | `src/services/installationService.ts` | Instalacion/desinstalacion/toggle por categoria y registro en `chat.promptFilesLocations` solo para prompts y context (metodos estaticos). |
 | `CloudSyncService` | `src/services/cloudSyncService.ts` | Conectar/desconectar nube (GitHub), push (snapshot completo via Git Data API), pull (Trees+Blobs), auto-sync con `FileSystemWatcher` + debounce, `scheduleExplicitPush`. |
 | `pdfExportService` (`exportToPdf`) | `src/services/pdfExportService.ts` | Convierte Markdown a HTML (`markdown-it`), genera un HTML imprimible temporal y lo abre externamente para "Guardar como PDF". |
 | `DevelopmentEnvironmentService` | `src/services/developmentEnvironmentService.ts` | `installExtensions()` (QuickPick multi-seleccion sobre `DEVELOPMENT_EXTENSION_IDS`) y `applyStyle()` (sobrescribe `settings.json` Global con un set fijo de ajustes). |
 | `registerChatParticipant` | `src/services/chatParticipantService.ts` | Registra el chat participant `@fhizx-ai-tools` con los subcomandos `usar` y `listar`. |
 | `registerCommands` | `src/subscriptions/commandSubscriptions.ts` | Registra todos los comandos de la extension, incluida la auto-actualizacion (descarga e instala `.vsix` desde un repo GitHub propio) y los comandos de nube/dev. |
-| `fsUtils` | `src/utils/fsUtils.ts` | Utilidades puras de FS sin dependencias de VS Code: `fileExists`, `isDirectory`, `safeReadFile`, `deletePath`, `toPromptFileName`. |
+| `fsUtils` | `src/utils/fsUtils.ts` | Utilidades puras de FS sin dependencias de VS Code: `fileExists`, `isDirectory`, `safeReadFile`, `deletePath` y normalizacion de extensiones por categoria. |
+| `copilotUtils` | `src/utils/copilotUtils.ts` | Resuelve directorios y nombres de destino por categoria; normaliza las carpetas de skills para generar `SKILL.md`. |
 | `resourceUtils` | `src/utils/resourceUtils.ts` | Utilidades con API de VS Code: `getGlobalPathConfig`, `ensureGlobalStructure`, `resolveResourceFilePath`, `notifyFsError`. |
 | `cloudUtils` | `src/utils/cloudUtils.ts` | `collectLocalFiles`, `diffLocalVsRemote`, `toPosixRelativePath`; puras y testeadas (`test/cloudUtils.test.ts`). |
 | `constants` | `src/constants/index.ts` | Centraliza constantes, tipos derivados (`CategoryType`) y helpers (`capitalizeCategory`). Aun conserva `VIEW_IDS` para las categorias antiguas + `TOKEN_COUNTER`/`CONFIGURATIONS`, que ya no se usan como IDs de vista real. |
@@ -214,8 +215,9 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 | **`markdown-it`** | Renderizado de Markdown a HTML para la exportacion a PDF. | Media; sin ella no funciona `exportToPdf`. |
 | **Node.js FS** (`fs`, `path`, `os`) | Operaciones sincronas sobre el disco y resolucion de rutas. | Alta. |
 | **Node `https`** | Cliente HTTP minimo para la API de GitHub: `checkForUpdates` (repo propio de releases) y `CloudSyncService` (backup del usuario). | Alta para nube/auto-update; sin red, fallan con mensaje. |
-| **Configuracion `chat.promptFilesLocations`** | Declara los directorios de prompt files para Copilot. | Alta para la integracion con Copilot. |
-| **Directorio `~/.vscode/github-copilot/`** | Destino de instalacion de recursos. | Alta para la integracion con Copilot. |
+| **Configuracion `chat.promptFilesLocations`** | Declara los directorios de prompt files para el agente Local de VS Code (prompts y context). | Alta para los prompt files. |
+| **Directorios `~/.copilot/agents`, `skills`, `instructions`** | Destinos nativos de personalizaciones para Copilot Agent Host. | Alta para la integracion con Copilot. |
+| **Directorio del perfil `User/prompts`** | Destino de prompt files de usuario para VS Code Local. | Alta para prompts. |
 | **Repo GitHub `lacien18/fhizx-ia-tools`** | Fuente de los `.vsix` de auto-actualizacion (hardcodeado en `commandSubscriptions.ts`). | Alta para el flujo de auto-update; riesgo de cadena de suministro si el repo es comprometido (ver seccion 7). |
 | **`context.secrets` (SecretStorage)** | Almacena el Personal Access Token de GitHub para la nube personal. | Alta para la seguridad de la integracion de nube. |
 
@@ -272,7 +274,7 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **Constantes**: todo valor repetido vive en `src/constants/index.ts`; no duplicar strings magicos en services ni en el webview.
 - **Tipos derivados**: exportar tipos (`CategoryType`) desde `constants` y no redefinirlos.
 - **Estructura de carpetas**: `src/providers/` (parcialmente en desuso, ver deuda tecnica), `src/services/` (dominio), `src/models/` (modelos), `src/subscriptions/` (comandos), `src/utils/` (utilidades), `src/webview/` (UI unica: provider + generadores HTML + script cliente + estilos), `src/constants/`, `test/`.
-- **Extension de archivos**: recursos instalables `.prompt.md`; instructions `.instructions.md`; notes `.md`; conversion con `toPromptFileName`.
+- **Extension de archivos**: prompts `.prompt.md`, agents `.agent.md`, skills `.skill.md`, instructions `.instructions.md`, context `.context.md` y notes `.md`; cada categoria conserva su formato al instalarse.
 - **Prefijos de categoria**: `p-`, `a-`, `s-`, `i-`, `c-` y sin prefijo para notes.
 - **HTML del webview**: se genera con template strings interpolados (no hay motor de plantillas); todo texto dinamico proveniente del sistema de archivos debe pasar por `escapeHtml` antes de interpolarse.
 - **Idioma**: mensajes de usuario en espanol; codigo y comentarios en ingles donde sea idiomático; tests con Given/When/Then en ingles.
@@ -301,7 +303,7 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **Colision de nombres**: crear archivo/carpeta o renombrar con destino existente se bloquea con mensaje de error.
 - **Instalacion de carpetas**: `installItem`, `uninstallItem` y `toggleItem` ignoran carpetas (return temprano).
 - **Notes no instalable**: la categoria `notes` no aparece en `COPILOT_CATEGORIES`; el menu contextual HTML del webview oculta las acciones de instalar/desinstalar cuando `category === "notes"`.
-- **Nombre con extensiones compuestas**: `toPromptFileName` maneja `.prompt.md`, `.instructions.md`, `.md` y sin extension.
+- **Nombre de skill**: la carpeta de destino se normaliza a minusculas, guiones y maximo 64 caracteres; el boilerplate incluye `name` y `description` en el frontmatter de `SKILL.md`.
 - **Busqueda en chat por nombre parcial**: `findFileRecursive` tolera buscar sin extension; un nombre que exista como `.md` y como `.prompt.md` resuelve el primero encontrado (orden de `readdirSync`, no determinista por categoria).
 - **Archivos sin editor activo ni seleccion en el picker**: el panel de Tokens muestra un placeholder ("Selecciona un archivo o abre uno en el editor").
 - **Archivo fijado para tokens eliminado o movido**: `_buildTokenHtml` valida `fs.existsSync(this._selectedTokenFile)` antes de leerlo; si ya no existe, cae de vuelta al editor activo.
@@ -321,7 +323,7 @@ No es Clean Architecture estricto, pero si una **arquitectura hexagonal ligera**
 - **Auto-actualizacion desde repositorio de terceros (cadena de suministro)**: `checkForUpdates` descarga un `.vsix` desde un repositorio GitHub publico hardcodeado (`lacien18/fhizx-ia-tools`) y lo instala directamente con `workbench.extensions.installExtension`, sin verificar checksum ni firma mas alla de la comparacion de nombre/semver. Si esa cuenta u repositorio fuera comprometido, un `.vsix` malicioso se instalaria con la confirmacion del usuario ("Instalar ahora"); es un vector de riesgo real y deberia documentarse claramente al usuario y, de ser posible, verificar integridad (hash conocido o firma) antes de instalar.
 - **Sobrescritura de configuracion del usuario**: `installDevStyle` reemplaza claves de `settings.json` (Global) con valores hardcodeados en el codigo fuente (tema, colores, rutas de SDK de Flutter especificas de una maquina, lista de palabras de `cSpell`, etc.); aunque pide confirmacion modal, es una operacion agresiva y no reversible automaticamente (no guarda backup de los valores previos).
 - **Persistencia de configuracion**: `chat.promptFilesLocations` se actualiza con `ConfigurationTarget.Global`; depende de que el setting exista en la version de VS Code (se ignora silenciosamente si no).
-- **Integracion con Copilot**: la extension asume la ruta `~/.vscode/github-copilot/`; cambios de Copilot en su layout interno romperian la instalacion.
+- **Integracion con Copilot**: agents, skills e instructions dependen de las ubicaciones de usuario `~/.copilot/`; cambios en el layout de Agent Host podrían requerir actualizar el resolvedor. Prompt files dependen del perfil activo de VS Code.
 - **Sincronizacion de datos**: la extension usa un `FileSystemWatcher` sobre la ruta global y ademas invoca `scheduleExplicitPush()` tras cada operacion CRUD (crear, renombrar, eliminar archivo/carpeta), independientemente de si auto-sync esta activado. Cuando auto-sync esta activado, los cambios detectados por el watcher tambien se suben automaticamente tras un debounce de 1,5 s. Carpetas vacias se sincronizan mediante un `.gitkeep` virtual generado por `collectLocalFiles`.
 - **Token de GitHub en `SecretStorage`**: el PAT de la nube personal se guarda cifrado via `context.secrets`, correctamente separado de la configuracion en texto plano (`cloud.owner`/`cloud.repo` si son publicos, pero el token no).
 - **Push como snapshot completo**: cada push crea un arbol git sin `base_tree`, de modo que el repositorio remoto es un espejo exacto del estado local. Archivos eliminados localmente desaparecen del remoto en el siguiente push. El primer push a un repo vacio crea la referencia de la rama con `POST /git/refs`; pushes subsecuentes actualizan la ref con `force: true`.

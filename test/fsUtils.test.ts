@@ -11,7 +11,7 @@ import {
   normalizeCategoryFileName,
   normalizeCategoryFilePath,
   stripCategoryFileExtension,
-  toPromptFileName,
+  toCopilotFileName,
 } from "../src/utils/fsUtils";
 import { CATEGORY_FILE_EXTENSIONS, type CategoryType } from "../src/constants";
 
@@ -28,61 +28,6 @@ describe("fsUtils ==>", () => {
     if (fs.existsSync(tmpDir)) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
-  });
-
-  describe("Data test ==> toPromptFileName", () => {
-    it("Given a .prompt.md file name, When converting, Then returns it unchanged", () => {
-      // Arrange
-      const input = "p-ejemplo.prompt.md";
-      // Act
-      const result = toPromptFileName(input);
-      // Assert
-      expect(result).toBe("p-ejemplo.prompt.md");
-    });
-
-    it("Given a .md file name, When converting, Then returns a .prompt.md name", () => {
-      // Arrange
-      const input = "p-ejemplo.md";
-      // Act
-      const result = toPromptFileName(input);
-      // Assert
-      expect(result).toBe("p-ejemplo.prompt.md");
-    });
-
-    it("Given a .instructions.md file name, When converting, Then returns a .prompt.md name", () => {
-      // Arrange
-      const input = "p-ejemplo.instructions.md";
-      // Act
-      const result = toPromptFileName(input);
-      // Assert
-      expect(result).toBe("p-ejemplo.prompt.md");
-    });
-
-    it("Given agent, skill and context file names, When converting, Then returns .prompt.md names", () => {
-      // Arrange
-      const inputs = [
-        "a-ejemplo.agent.md",
-        "s-ejemplo.skill.md",
-        "c-ejemplo.context.md",
-      ];
-      // Act
-      const results = inputs.map(toPromptFileName);
-      // Assert
-      expect(results).toEqual([
-        "a-ejemplo.prompt.md",
-        "s-ejemplo.prompt.md",
-        "c-ejemplo.prompt.md",
-      ]);
-    });
-
-    it("Given a name without extension, When converting, Then appends .prompt.md", () => {
-      // Arrange
-      const input = "p-ejemplo";
-      // Act
-      const result = toPromptFileName(input);
-      // Assert
-      expect(result).toBe("p-ejemplo.prompt.md");
-    });
   });
 
   describe("Data test ==> category extensions", () => {
@@ -273,6 +218,34 @@ describe("fsUtils ==>", () => {
       deletePath(dirPath, true);
       // Assert
       expect(fs.existsSync(dirPath)).toBe(false);
+    });
+  });
+
+  describe("Data test ==> toCopilotFileName", () => {
+    it("Given a Copilot customization, When converting its name, Then keeps native extensions and converts context to prompt format", () => {
+      // Arrange
+      const filesByCategory: Record<CategoryType, string> = {
+        prompts: "p-ejemplo.prompt.md",
+        agents: "a-ejemplo.agent.md",
+        skills: "s-ejemplo.skill.md",
+        instructions: "i-ejemplo.instructions.md",
+        context: "c-ejemplo.context.md",
+        notes: "mi-nota.md",
+      };
+      // Act
+      const results = Object.entries(filesByCategory).map(
+        ([category, fileName]) =>
+          toCopilotFileName(fileName, category as CategoryType),
+      );
+      // Assert
+      expect(results).toEqual([
+        "p-ejemplo.prompt.md",
+        "a-ejemplo.agent.md",
+        "s-ejemplo.skill.md",
+        "i-ejemplo.instructions.md",
+        "c-ejemplo.prompt.md",
+        "mi-nota.prompt.md",
+      ]);
     });
   });
 

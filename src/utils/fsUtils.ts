@@ -117,17 +117,14 @@ export function stripCategoryFileExtension(fileName: string): string {
     : fileName;
 }
 
-/**
- * Convierte un nombre de archivo al equivalente `.prompt.md` para Copilot.
- * - "p-ejemplo.prompt.md"          -> "p-ejemplo.prompt.md"
- * - "a-ejemplo.agent.md"           -> "a-ejemplo.prompt.md"
- * - "s-ejemplo.skill.md"           -> "s-ejemplo.prompt.md"
- * - "p-ejemplo.instructions.md"    -> "p-ejemplo.prompt.md"
- * - "c-ejemplo.context.md"         -> "c-ejemplo.prompt.md"
- * - "p-ejemplo.md"                 -> "p-ejemplo.prompt.md"
- * - "p-ejemplo"                    -> "p-ejemplo.prompt.md"
- */
-export function toPromptFileName(fileName: string): string {
-  const baseName = stripCategoryFileExtension(fileName);
-  return `${baseName}${FILE_EXTENSIONS.PROMPT_MD}`;
+export function toCopilotFileName(
+  fileName: string,
+  category: CategoryType,
+): string {
+  if (category === "context" || category === "notes") {
+    return `${stripCategoryFileExtension(fileName)}${FILE_EXTENSIONS.PROMPT_MD}`;
+  }
+
+  return normalizeCategoryFileName(fileName, category);
 }
+

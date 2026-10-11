@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { WorkspaceTreeDataProvider } from "./providers/workspaceTreeDataProvider";
 import { FileManagerService } from "./services/fileManagerService";
+import { InstallationService } from "./services/installationService";
 import { registerChatParticipant } from "./services/chatParticipantService";
 import { CloudSyncService } from "./services/cloudSyncService";
 import { registerCommands } from "./subscriptions/commandSubscriptions";
@@ -12,8 +13,6 @@ import {
   CONFIG_NAMESPACE,
   CONFIG_KEYS,
   COMMANDS,
-  COPILOT_CATEGORIES,
-  COPILOT_BASE_DIR,
 } from "./constants";
 import {
   ensureGlobalStructure,
@@ -21,6 +20,8 @@ import {
 } from "./utils/resourceUtils";
 
 export function activate(context: vscode.ExtensionContext) {
+  InstallationService.initialize(context.globalStorageUri);
+
   // Servicio de nube gratuita (GitHub)
   const cloudService = new CloudSyncService(context);
 
@@ -127,11 +128,12 @@ export function deactivate() {}
 
 async function ensureCopilotPromptConfig() {
   try {
-    const path = await import("path");
     const fs = await import("fs");
 
-    const copilotBase = COPILOT_BASE_DIR;
-    const categories = COPILOT_CATEGORIES;
+    const promptDirectories = [
+      InstallationService.getCopilotGlobalPath("prompts"),
+      InstallationService.getCopilotGlobalPath("context"),
+    ];
     const config = vscode.workspace.getConfiguration();
 
     // Register each existing category directory
@@ -140,10 +142,9 @@ async function ensureCopilotPromptConfig() {
       {};
     let updated = false;
 
-    for (const cat of categories) {
-      const catPath = path.join(copilotBase, cat);
-      if (fs.existsSync(catPath) && !locations[catPath]) {
-        locations[catPath] = true;
+    for (const promptDirectory of promptDirectories) {
+      if (fs.existsSync(promptDirectory) && !locations[promptDirectory]) {
+        locations[promptDirectory] = true;
         updated = true;
       }
     }

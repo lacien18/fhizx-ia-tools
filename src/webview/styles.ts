@@ -234,21 +234,6 @@ export function getStyles(): string {
       opacity: 1;
       background: var(--vscode-toolbar-hoverBackground);
     }
-    .icon-btn.recording {
-      opacity: 1;
-      color: var(--vscode-testing-iconFailed);
-      background: var(--vscode-toolbar-hoverBackground);
-    }
-
-    .voice-note-status {
-      max-width: 90px;
-      overflow: hidden;
-      color: var(--vscode-descriptionForeground);
-      font-size: 10px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     /* ── File/Folder List ── */
     .item-list {
       list-style: none;

@@ -94,14 +94,21 @@ export class FileManagerService {
   }
 
   async createVoiceNote(
+    name: string,
     transcript: string,
     refreshAll: () => void,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const content = transcript.trim();
       if (!content) {
         vscode.window.showWarningMessage("No se detectó contenido en el dictado.");
-        return;
+        return false;
+      }
+
+      const fileName = this.sanitizeVoiceNoteName(name);
+      if (!fileName) {
+        vscode.window.showWarningMessage("Indica un nombre válido para la nota.");
+        return false;
       }
 
       const basePath = this.providers.notes.getGlobalCategoryPath() || "";
@@ -109,34 +116,37 @@ export class FileManagerService {
         vscode.window.showWarningMessage(
           "Configura la ruta global haciendo clic en el icono de configuración.",
         );
-        return;
+        return false;
       }
 
       fs.mkdirSync(basePath, { recursive: true });
-      const baseName = this.getVoiceNoteBaseName(content);
-      const filePath = this.getUniqueVoiceNotePath(basePath, baseName);
-      const noteContent = `# Nota por voz\n\n${content}\n`;
+  const filePath = this.getUniqueVoiceNotePath(basePath, fileName);
+  const noteContent = `# ${fileName}\n\n${content}\n`;
 
       fs.writeFileSync(filePath, noteContent, "utf-8");
       refreshAll();
       this.cloudService?.scheduleExplicitPush();
       void vscode.window.showTextDocument(vscode.Uri.file(filePath));
+      return true;
     } catch (error) {
       notifyFsError("No se pudo crear la nota por voz", error);
+      return false;
     }
   }
 
-  private getVoiceNoteBaseName(content: string): string {
-    const slug = content
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48)
-      .replace(/-+$/g, "");
+  private sanitizeVoiceNoteName(name: string): string {
+    const sanitized = stripCategoryFileExtension(
+      name
+        .trim()
+        .replace(/[<>:"/\\|?*\u0000-\u001f]/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/^[. ]+|[. ]+$/g, ""),
+    );
+    if (!sanitized) return "";
 
-    return slug ? `nota-${slug}` : `nota-${Date.now()}`;
+    return /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(sanitized)
+      ? `_${sanitized}`
+      : sanitized;
   }
 
   private getUniqueVoiceNotePath(basePath: string, baseName: string): string {

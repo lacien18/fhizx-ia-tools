@@ -67,6 +67,7 @@ export const COMMANDS = {
   UNINSTALL_ITEM: "fhizxAiTools.uninstallItem",
   CHECK_FOR_UPDATES: "fhizxAiTools.checkForUpdates",
   WORKBENCH_CHAT_OPEN: "workbench.action.chat.open",
+  CHAT_TOGGLE_SPEECH_TO_TEXT: "workbench.action.chat.toggleSpeechToText",
   LIST: "fhizxAiTools.list",
   CLOUD_CONNECT: "fhizxAiTools.cloudConnect",
   CLOUD_PUSH: "fhizxAiTools.cloudPush",
